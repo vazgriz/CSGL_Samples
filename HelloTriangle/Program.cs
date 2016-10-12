@@ -537,7 +537,7 @@ namespace VK_Test {
                 renderPassInfo.renderArea.extent = swapchainExtent;
 
                 VkClearValue clearColor = new VkClearValue();
-                clearColor.color.float32 = 0;
+                clearColor.color.float32_0 = 0;
                 clearColor.color.float32_1 = 0;
                 clearColor.color.float32_2 = 0;
                 clearColor.color.float32_3 = 1f;

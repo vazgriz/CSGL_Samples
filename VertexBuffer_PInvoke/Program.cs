@@ -1,14 +1,50 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.InteropServices;
 
 using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
 using CSGL.Vulkan.Unmanaged;
-using System.Runtime.InteropServices;
 
 namespace VK_DllTest {
+    public struct Vertex {
+        public Vector3 position;
+        public Vector3 color;
+
+        public Vertex(Vector3 position, Vector3 color) {
+            this.position = position;
+            this.color = color;
+        }
+
+        public static VkVertexInputBindingDescription GetBindingDescription() {
+            var result = new VkVertexInputBindingDescription();
+            result.binding = 0;
+            result.stride = (uint)Marshal.SizeOf<Vertex>();
+            result.inputRate = VkVertexInputRate.VertexInputRateVertex;
+
+            return result;
+        }
+
+        public static VkVertexInputAttributeDescription[] GetAttributeDescriptions() {
+            var a = new VkVertexInputAttributeDescription();
+            a.binding = 0;
+            a.location = 0;
+            a.format = VkFormat.FormatR32g32b32Sfloat;
+            a.offset = (uint)Marshal.OffsetOf<Vertex>("position");
+
+            var b = new VkVertexInputAttributeDescription();
+            b.binding = 0;
+            b.location = 1;
+            b.format = VkFormat.FormatR32g32b32Sfloat;
+            b.offset = (uint)Marshal.OffsetOf<Vertex>("color");
+
+            return new VkVertexInputAttributeDescription[] { a, b };
+        }
+    }
+
     class Program : IDisposable {
         public static void Main(string[] args) {
             using (var p = new Program()) {
@@ -27,6 +63,12 @@ namespace VK_DllTest {
 
         string[] deviceExtensions = {
             "VK_KHR_swapchain"
+        };
+
+        Vertex[] vertices = {
+            new Vertex(new Vector3(0, -1, 0), new Vector3(0, 0, 0)),
+            new Vertex(new Vector3(1, 1, 0), new Vector3(0, 1, 0)),
+            new Vertex(new Vector3(-1, 1, 0), new Vector3(0, 0, 1)),
         };
 
         int height = 800;
@@ -54,6 +96,8 @@ namespace VK_DllTest {
         VkPipeline pipeline;
         List<VkFramebuffer> swapchainFramebuffers;
         VkCommandPool commandPool;
+        VkBuffer vertexBuffer;
+        VkDeviceMemory vertexBufferMemory;
         List<VkCommandBuffer> commandBuffers;
         VkSemaphore imageAvailableSemaphore;
         VkSemaphore renderFinishedSemaphore;
@@ -73,6 +117,7 @@ namespace VK_DllTest {
             CreateGraphicsPipeline();
             CreateFramebuffers();
             CreateCommandPool();
+            CreateVertexBuffer();
             CreateCommandBuffers();
             CreateSemaphores();
 
@@ -82,6 +127,8 @@ namespace VK_DllTest {
         public void Dispose() {
             VK.DestroySemaphore(device, imageAvailableSemaphore, alloc);
             VK.DestroySemaphore(device, renderFinishedSemaphore, alloc);
+            VK.FreeMemory(device, vertexBufferMemory, alloc);
+            VK.DestroyBuffer(device, vertexBuffer, alloc);
             VK.DestroyCommandPool(device, commandPool, alloc);
             foreach (var fb in swapchainFramebuffers) VK.DestroyFramebuffer(device, fb, alloc);
             VK.DestroyPipeline(device, pipeline, alloc);
@@ -570,6 +617,14 @@ namespace VK_DllTest {
             var vertexInputInfo = new VkPipelineVertexInputStateCreateInfo();
             vertexInputInfo.sType = VkStructureType.StructureTypePipelineVertexInputStateCreateInfo;
 
+            var bindingDescription = new Marshalled<VkVertexInputBindingDescription>(Vertex.GetBindingDescription());
+            var attributeDescriptions = new MarshalledArray<VkVertexInputAttributeDescription>(Vertex.GetAttributeDescriptions());
+
+            vertexInputInfo.vertexBindingDescriptionCount = 1;
+            vertexInputInfo.pVertexBindingDescriptions = bindingDescription.Address;
+            vertexInputInfo.vertexAttributeDescriptionCount = 2;
+            vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.Address;
+
             var vertexInputMarshalled = new Marshalled<VkPipelineVertexInputStateCreateInfo>(vertexInputInfo);
 
             var inputAssembly = new VkPipelineInputAssemblyStateCreateInfo();
@@ -678,6 +733,8 @@ namespace VK_DllTest {
             entry.Dispose();
             shaderStages.Dispose();
             vertexInputMarshalled.Dispose();
+            bindingDescription.Dispose();
+            attributeDescriptions.Dispose();
             inputAssemblyMarshalled.Dispose();
             viewportMarshalled.Dispose();
             scissorMarshalled.Dispose();
@@ -724,6 +781,55 @@ namespace VK_DllTest {
             info.queueFamilyIndex = graphicsIndex;
 
             var result = VK.CreateCommandPool(device, ref info, alloc, out commandPool);
+        }
+
+        void CreateVertexBuffer() {
+            var info = new VkBufferCreateInfo();
+            info.sType = VkStructureType.StructureTypeBufferCreateInfo;
+            info.size = (uint)(Marshal.SizeOf<Vertex>() * vertices.Length);
+            info.usage = VkBufferUsageFlags.BufferUsageVertexBufferBit;
+            info.sharingMode = VkSharingMode.SharingModeExclusive;
+
+            VK.CreateBuffer(device, ref info, alloc, out vertexBuffer);
+
+            VkMemoryRequirements req;
+            VK.GetBufferMemoryRequirements(device, vertexBuffer, out req);
+
+            var allocInfo = new VkMemoryAllocateInfo();
+            allocInfo.sType = VkStructureType.StructureTypeMemoryAllocateInfo;
+            allocInfo.allocationSize = req.size;
+            allocInfo.memoryTypeIndex = FindMemoryType(req.memoryTypeBits,
+                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
+                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit);
+
+            var allocInfoMarshalled = new Marshalled<VkMemoryAllocateInfo>(allocInfo);
+
+            VK.AllocateMemory(device, allocInfoMarshalled.Address, alloc, out vertexBufferMemory);
+
+            VK.BindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+
+            IntPtr data;
+            VK.MapMemory(device, vertexBufferMemory, 0, info.size, VkMemoryMapFlags.None, out data);
+            Interop.Copy(vertices, data);
+            VK.UnmapMemory(device, vertexBufferMemory);
+
+            allocInfoMarshalled.Dispose();
+        }
+
+        uint FindMemoryType(uint filter, VkMemoryPropertyFlags flags) {
+            var propsMarshalled = new Marshalled<VkPhysicalDeviceMemoryProperties>();
+            VK.GetPhysicalDeviceMemoryProperties(physicalDevice, propsMarshalled.Address);
+            VkPhysicalDeviceMemoryProperties props = propsMarshalled.Value;
+
+            for (int i = 0; i < props.memoryTypeCount; i++) {
+                if ((filter & (1 << i)) != 0 && (props.GetMemoryTypes(i).propertyFlags & flags) == flags) {
+                    return (uint)i;
+                }
+            }
+
+            propsMarshalled.Dispose();
+
+            throw new Exception("Failed to find suitable memory type");
         }
 
         void CreateCommandBuffers() {
@@ -774,6 +880,11 @@ namespace VK_DllTest {
 
                 VK.CmdBeginRenderPass(commandBuffers[i], ref renderPassInfo, VkSubpassContents.SubpassContentsInline);
                 VK.CmdBindPipeline(commandBuffers[i], VkPipelineBindPoint.PipelineBindPointGraphics, pipeline);
+
+                var vertexBuffers = new Marshalled<VkBuffer>(vertexBuffer);
+                ulong offset = 0;
+                VK.CmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers.Address, ref offset);
+
                 VK.CmdDraw(commandBuffers[i], 3, 1, 0, 0);
                 VK.CmdEndRenderPass(commandBuffers[i]);
 

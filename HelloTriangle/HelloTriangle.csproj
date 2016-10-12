@@ -35,9 +35,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CSharpGameLibrary">
-      <HintPath>..\..\CSharpGameLibrary\CSharpGameLibrary\bin\Release\CSharpGameLibrary.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -64,6 +61,12 @@
     <Content Include="glfw3.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpGameLibrary\CSharpGameLibrary\CSharpGameLibrary.csproj">
+      <Project>{d7103402-1c84-4921-af9c-38d9a6231e7a}</Project>
+      <Name>CSharpGameLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
