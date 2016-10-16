@@ -2,14 +2,13 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
 using CSGL.Vulkan.Unmanaged;
 
-namespace VK_DllTest {
+namespace Samples {
     public struct Vertex {
         public Vector3 position;
         public Vector3 color;
@@ -22,24 +21,25 @@ namespace VK_DllTest {
         public static VkVertexInputBindingDescription GetBindingDescription() {
             var result = new VkVertexInputBindingDescription();
             result.binding = 0;
-            result.stride = (uint)Marshal.SizeOf<Vertex>();
+            result.stride = (uint)Interop.SizeOf<Vertex>();
             result.inputRate = VkVertexInputRate.VertexInputRateVertex;
 
             return result;
         }
 
         public static VkVertexInputAttributeDescription[] GetAttributeDescriptions() {
+            Vertex v = new Vertex();
             var a = new VkVertexInputAttributeDescription();
             a.binding = 0;
             a.location = 0;
             a.format = VkFormat.FormatR32g32b32Sfloat;
-            a.offset = (uint)Marshal.OffsetOf<Vertex>("position");
+            a.offset = (uint)Interop.Offset(ref v, ref v.position);
 
             var b = new VkVertexInputAttributeDescription();
             b.binding = 0;
             b.location = 1;
             b.format = VkFormat.FormatR32g32b32Sfloat;
-            b.offset = (uint)Marshal.OffsetOf<Vertex>("color");
+            b.offset = (uint)Interop.Offset(ref v, ref v.color);
 
             return new VkVertexInputAttributeDescription[] { a, b };
         }
@@ -66,7 +66,7 @@ namespace VK_DllTest {
         };
 
         Vertex[] vertices = {
-            new Vertex(new Vector3(0, -1, 0), new Vector3(0, 0, 0)),
+            new Vertex(new Vector3(0, -1, 0), new Vector3(1, 0, 0)),
             new Vertex(new Vector3(1, 1, 0), new Vector3(0, 1, 0)),
             new Vertex(new Vector3(-1, 1, 0), new Vector3(0, 0, 1)),
         };
@@ -577,17 +577,17 @@ namespace VK_DllTest {
         }
 
         public VkShaderModule CreateShaderModule(byte[] code) {
-            GCHandle handle = GCHandle.Alloc(code, GCHandleType.Pinned);
+            var codePinned = new PinnedArray<byte>(code);
 
             var info = new VkShaderModuleCreateInfo();
             info.sType = VkStructureType.StructureTypeShaderModuleCreateInfo;
             info.codeSize = (ulong)code.LongLength;
-            info.pCode = handle.AddrOfPinnedObject();
+            info.pCode = codePinned.Address;
 
             VkShaderModule temp;
 
             var result = VK.CreateShaderModule(device, ref info, alloc, out temp);
-            handle.Free();
+            codePinned.Dispose();
 
             return temp;
         }
@@ -786,7 +786,7 @@ namespace VK_DllTest {
         void CreateVertexBuffer() {
             var info = new VkBufferCreateInfo();
             info.sType = VkStructureType.StructureTypeBufferCreateInfo;
-            info.size = (uint)(Marshal.SizeOf<Vertex>() * vertices.Length);
+            info.size = (uint)Interop.SizeOf(vertices);
             info.usage = VkBufferUsageFlags.BufferUsageVertexBufferBit;
             info.sharingMode = VkSharingMode.SharingModeExclusive;
 
@@ -802,9 +802,7 @@ namespace VK_DllTest {
                 VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
                 | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit);
 
-            var allocInfoMarshalled = new Marshalled<VkMemoryAllocateInfo>(allocInfo);
-
-            VK.AllocateMemory(device, allocInfoMarshalled.Address, alloc, out vertexBufferMemory);
+            VK.AllocateMemory(device, ref allocInfo, alloc, out vertexBufferMemory);
 
             VK.BindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
 
@@ -812,8 +810,6 @@ namespace VK_DllTest {
             VK.MapMemory(device, vertexBufferMemory, 0, info.size, VkMemoryMapFlags.None, out data);
             Interop.Copy(vertices, data);
             VK.UnmapMemory(device, vertexBufferMemory);
-
-            allocInfoMarshalled.Dispose();
         }
 
         uint FindMemoryType(uint filter, VkMemoryPropertyFlags flags) {

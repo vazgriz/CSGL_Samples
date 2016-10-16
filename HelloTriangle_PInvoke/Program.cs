@@ -8,7 +8,7 @@ using CSGL.Vulkan;
 using CSGL.Vulkan.Unmanaged;
 using System.Runtime.InteropServices;
 
-namespace VK_DllTest {
+namespace Samples {
     class Program : IDisposable {
         public static void Main(string[] args) {
             using (var p = new Program()) {

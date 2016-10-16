@@ -1,12 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 
+using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
 using CSGL.Vulkan.Managed;
 
+using Buffer = CSGL.Vulkan.Managed.Buffer;
+
 namespace Samples {
+    public struct Vertex {
+        public Vector3 position;
+        public Vector3 color;
+
+        public Vertex(Vector3 position, Vector3 color) {
+            this.position = position;
+            this.color = color;
+        }
+
+        public static VkVertexInputBindingDescription GetBindingDescription() {
+            var result = new VkVertexInputBindingDescription();
+            result.binding = 0;
+            result.stride = (uint)Interop.SizeOf<Vertex>();
+            result.inputRate = VkVertexInputRate.VertexInputRateVertex;
+
+            return result;
+        }
+
+        public static VkVertexInputAttributeDescription[] GetAttributeDescriptions() {
+            Vertex v = new Vertex();
+            var a = new VkVertexInputAttributeDescription();
+            a.binding = 0;
+            a.location = 0;
+            a.format = VkFormat.FormatR32g32b32Sfloat;
+            a.offset = (uint)Interop.Offset(ref v, ref v.position);
+
+            var b = new VkVertexInputAttributeDescription();
+            b.binding = 0;
+            b.location = 1;
+            b.format = VkFormat.FormatR32g32b32Sfloat;
+            b.offset = (uint)Interop.Offset(ref v, ref v.color);
+
+            return new VkVertexInputAttributeDescription[] { a, b };
+        }
+    }
     class Program : IDisposable {
         static void Main(string[] args) {
             using (var p = new Program()) {
@@ -22,6 +61,12 @@ namespace Samples {
 
         string[] deviceExtensions = {
             "VK_KHR_swapchain"
+        };
+
+        Vertex[] vertices = {
+            new Vertex(new Vector3(0, -1, 0), new Vector3(1, 0, 0)),
+            new Vertex(new Vector3(1, 1, 0), new Vector3(0, 1, 0)),
+            new Vertex(new Vector3(-1, 1, 0), new Vector3(0, 0, 1)),
         };
 
         int width = 800;
@@ -48,6 +93,8 @@ namespace Samples {
         Pipeline pipeline;
         List<Framebuffer> swapchainFramebuffers;
         CommandPool commandPool;
+        Buffer vertexBuffer;
+        DeviceMemory deviceMemory;
         List<CommandBuffer> commandBuffers;
         Semaphore imageAvailableSemaphore;
         Semaphore renderFinishedSemaphore;
@@ -69,6 +116,7 @@ namespace Samples {
             CreateGraphicsPipeline();
             CreateFramebuffers();
             CreateCommandPool();
+            CreateVertexBuffer();
             CreateCommandBuffers();
             CreateSemaphores();
 
@@ -78,6 +126,8 @@ namespace Samples {
         public void Dispose() {
             imageAvailableSemaphore.Dispose();
             renderFinishedSemaphore.Dispose();
+            deviceMemory.Dispose();
+            vertexBuffer.Dispose();
             commandPool.Dispose();
             foreach (var fb in swapchainFramebuffers) fb.Dispose();
             pipeline.Dispose();
@@ -413,6 +463,8 @@ namespace Samples {
             var shaderStages = new PipelineShaderStageCreateInfo[] { vertInfo, fragInfo };
 
             var vertexInputInfo = new PipelineVertexInputStateCreateInfo();
+            vertexInputInfo.vertexBindingDescriptions = new VkVertexInputBindingDescription[] { Vertex.GetBindingDescription() };
+            vertexInputInfo.vertexAttributeDescriptions = Vertex.GetAttributeDescriptions();
 
             var inputAssembly = new PipelineInputAssemblyStateCreateInfo();
             inputAssembly.topology = VkPrimitiveTopology.PrimitiveTopologyTriangleList;
@@ -512,6 +564,40 @@ namespace Samples {
             commandPool = new CommandPool(device, info);
         }
 
+        void CreateVertexBuffer() {
+            var info = new BufferCreateInfo();
+            info.size = (uint)Interop.SizeOf(vertices);
+            info.usage = VkBufferUsageFlags.BufferUsageVertexBufferBit;
+            info.sharingMode = VkSharingMode.SharingModeExclusive;
+
+            vertexBuffer = new Buffer(device, info);
+
+            var allocInfo = new MemoryAllocateInfo();
+            allocInfo.allocationSize = vertexBuffer.Requirements.size;
+            allocInfo.memoryTypeIndex = FindMemoryType(vertexBuffer.Requirements.memoryTypeBits,
+                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
+                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit);
+
+            deviceMemory = new DeviceMemory(device, allocInfo);
+            vertexBuffer.Bind(deviceMemory, 0);
+
+            var data = deviceMemory.Map(0, vertexBuffer.Requirements.size, VkMemoryMapFlags.None);
+            Interop.Copy(vertices, data);
+            deviceMemory.Unmap();
+        }
+
+        uint FindMemoryType(uint filter, VkMemoryPropertyFlags flags) {
+            var props = physicalDevice.MemoryProperties;
+
+            for (int i = 0; i < props.memoryTypeCount; i++) {
+                if ((filter & (1 << i)) != 0 && (props.GetMemoryTypes(i).propertyFlags & flags) == flags) {
+                    return (uint)i;
+                }
+            }
+
+            throw new Exception("Failed to find suitable memory type");
+        }
+
         void CreateCommandBuffers() {
             if (commandBuffers != null) {
                 commandPool.Free(commandBuffers);
@@ -546,6 +632,7 @@ namespace Samples {
 
                 buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.SubpassContentsInline);
                 buffer.BindPipeline(VkPipelineBindPoint.PipelineBindPointGraphics, pipeline);
+                buffer.BindVertexBuffers(0, new Buffer[] { vertexBuffer }, new ulong[] { 0 });
                 buffer.Draw(3, 1, 0, 0);
                 buffer.EndRenderPass();
                 buffer.End();
