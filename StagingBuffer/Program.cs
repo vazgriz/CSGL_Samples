@@ -563,79 +563,26 @@ namespace Samples {
             commandPool = new CommandPool(device, info);
         }
 
-        void CreateBuffer(ulong size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory memory) {
+        void CreateVertexBuffer() {
             var info = new BufferCreateInfo();
-            info.size = size;
-            info.usage = usage;
+            info.size = (uint)Interop.SizeOf(vertices);
+            info.usage = VkBufferUsageFlags.BufferUsageVertexBufferBit;
             info.sharingMode = VkSharingMode.SharingModeExclusive;
 
-            buffer = new Buffer(device, info);
+            vertexBuffer = new Buffer(device, info);
 
             var allocInfo = new MemoryAllocateInfo();
-            allocInfo.allocationSize = buffer.Requirements.size;
-            allocInfo.memoryTypeIndex = FindMemoryType(vertexBuffer.Requirements.memoryTypeBits, properties);
-
-            memory = new DeviceMemory(device, allocInfo);
-            buffer.Bind(deviceMemory, 0);
-        }
-
-        void CreateVertexBuffer() {
-            ulong bufferSize = (ulong)Interop.SizeOf(vertices);
-            Buffer stagingBuffer;
-            DeviceMemory stagingBufferMemory;
-            CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferSrcBit,
+            allocInfo.allocationSize = vertexBuffer.Requirements.size;
+            allocInfo.memoryTypeIndex = FindMemoryType(vertexBuffer.Requirements.memoryTypeBits,
                 VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
-                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit,
-                out stagingBuffer,
-                out stagingBufferMemory);
+                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit);
+
+            deviceMemory = new DeviceMemory(device, allocInfo);
+            vertexBuffer.Bind(deviceMemory, 0);
 
             var data = deviceMemory.Map(0, vertexBuffer.Requirements.size, VkMemoryMapFlags.None);
             Interop.Copy(vertices, data);
             deviceMemory.Unmap();
-
-            CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferDstBit
-                | VkBufferUsageFlags.BufferUsageVertexBufferBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
-                out vertexBuffer,
-                out deviceMemory);
-
-            CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-            stagingBuffer.Dispose();
-            stagingBufferMemory.Dispose();
-        }
-
-        void CopyBuffer(Buffer src, Buffer dst, ulong size) {
-            var info = new CommandBufferAllocateInfo();
-            info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.commandPool = commandPool;
-            info.count = 1;
-
-            var buffers = commandPool.Allocate(info);
-            var buffer = buffers[0];
-
-            var beginInfo = new CommandBufferBeginInfo();
-            beginInfo.flags = VkCommandBufferUsageFlags.CommandBufferUsageOneTimeSubmitBit;
-
-            buffer.Begin(beginInfo);
-
-            VkBufferCopy region = new VkBufferCopy();
-            region.srcOffset = 0;
-            region.dstOffset = 0;
-            region.size = size;
-
-            buffer.Copy(src, dst, new VkBufferCopy[] { region });
-            buffer.End();
-
-            var submitInfo = new SubmitInfo();
-            submitInfo.commandBuffers = new CommandBuffer[] { buffer };
-
-            graphicsQueue.Submit(new SubmitInfo[] { submitInfo }, null);
-            graphicsQueue.WaitIdle();
-
-            commandPool.Free(buffers);
         }
 
         uint FindMemoryType(uint filter, VkMemoryPropertyFlags flags) {
