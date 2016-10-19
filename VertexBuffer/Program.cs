@@ -6,9 +6,8 @@ using System.Numerics;
 using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
-using CSGL.Vulkan.Managed;
 
-using Buffer = CSGL.Vulkan.Managed.Buffer;
+using Buffer = CSGL.Vulkan.Buffer;
 
 namespace Samples {
     public struct Vertex {
@@ -86,7 +85,7 @@ namespace Samples {
         PhysicalDevice physicalDevice;
         Device device;
         Swapchain swapchain;
-        List<CSGL.Vulkan.Managed.Image> swapchainImages;
+        List<CSGL.Vulkan.Image> swapchainImages;
         List<ImageView> swapchainImageViews;
         RenderPass renderPass;
         PipelineLayout pipelineLayout;

@@ -4,7 +4,6 @@ using System.IO;
 
 using CSGL.GLFW;
 using CSGL.Vulkan;
-using CSGL.Vulkan.Managed;
 
 namespace Samples {
     class Program : IDisposable {
@@ -41,7 +40,7 @@ namespace Samples {
         PhysicalDevice physicalDevice;
         Device device;
         Swapchain swapchain;
-        List<CSGL.Vulkan.Managed.Image> swapchainImages;
+        List<CSGL.Vulkan.Image> swapchainImages;
         List<ImageView> swapchainImageViews;
         RenderPass renderPass;
         PipelineLayout pipelineLayout;
