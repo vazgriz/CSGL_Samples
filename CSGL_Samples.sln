@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VertexBuffer", "VertexBuffe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IndexBuffer", "IndexBuffer\IndexBuffer.csproj", "{68DC1C18-395F-4B0B-BD17-727D18C4E7BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniformBuffer", "UniformBuffer\UniformBuffer.csproj", "{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{68DC1C18-395F-4B0B-BD17-727D18C4E7BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68DC1C18-395F-4B0B-BD17-727D18C4E7BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68DC1C18-395F-4B0B-BD17-727D18C4E7BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
