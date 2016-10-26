@@ -63,9 +63,14 @@ namespace Samples {
         };
 
         Vertex[] vertices = {
-            new Vertex(new Vector3(0, -1, 0), new Vector3(1, 0, 0)),
-            new Vertex(new Vector3(1, 1, 0), new Vector3(0, 1, 0)),
-            new Vertex(new Vector3(-1, 1, 0), new Vector3(0, 0, 1)),
+            new Vertex(new Vector3(-0.5f, -0.5f, 0), new Vector3(1, 0, 0)),
+            new Vertex(new Vector3(0.5f, -0.5f, 0), new Vector3(0, 1, 0)),
+            new Vertex(new Vector3(0.5f, 0.5f, 0), new Vector3(0, 0, 1)),
+            new Vertex(new Vector3(-0.5f, 0.5f, 0), new Vector3(1, 1, 1)),
+        };
+
+        uint[] indices = {
+            0, 1, 2, 2, 3, 0
         };
 
         int width = 800;
@@ -94,6 +99,8 @@ namespace Samples {
         CommandPool commandPool;
         Buffer vertexBuffer;
         DeviceMemory vertexBufferMemory;
+        Buffer indexBuffer;
+        DeviceMemory indexBufferMemory;
         List<CommandBuffer> commandBuffers;
         Semaphore imageAvailableSemaphore;
         Semaphore renderFinishedSemaphore;
@@ -116,6 +123,7 @@ namespace Samples {
             CreateFramebuffers();
             CreateCommandPool();
             CreateVertexBuffer();
+            CreateIndexBuffer();
             CreateCommandBuffers();
             CreateSemaphores();
 
@@ -125,6 +133,8 @@ namespace Samples {
         public void Dispose() {
             imageAvailableSemaphore.Dispose();
             renderFinishedSemaphore.Dispose();
+            indexBufferMemory.Dispose();
+            indexBuffer.Dispose();
             vertexBufferMemory.Dispose();
             vertexBuffer.Dispose();
             commandPool.Dispose();
@@ -607,6 +617,34 @@ namespace Samples {
             stagingBufferMemory.Dispose();
         }
 
+        void CreateIndexBuffer() {
+            ulong bufferSize = (ulong)Interop.SizeOf(indices);
+            Buffer stagingBuffer;
+            DeviceMemory stagingBufferMemory;
+            CreateBuffer(bufferSize,
+                VkBufferUsageFlags.BufferUsageTransferSrcBit,
+                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
+                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit,
+                out stagingBuffer,
+                out stagingBufferMemory);
+
+            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            Interop.Copy(indices, data);
+            stagingBufferMemory.Unmap();
+
+            CreateBuffer(bufferSize,
+                VkBufferUsageFlags.BufferUsageTransferDstBit
+                | VkBufferUsageFlags.BufferUsageIndexBufferBit,
+                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                out indexBuffer,
+                out indexBufferMemory);
+
+            CopyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+            stagingBuffer.Dispose();
+            stagingBufferMemory.Dispose();
+        }
+
         void CopyBuffer(Buffer src, Buffer dst, ulong size) {
             var info = new CommandBufferAllocateInfo();
             info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
@@ -685,7 +723,8 @@ namespace Samples {
                 buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.SubpassContentsInline);
                 buffer.BindPipeline(VkPipelineBindPoint.PipelineBindPointGraphics, pipeline);
                 buffer.BindVertexBuffers(0, new Buffer[] { vertexBuffer }, new ulong[] { 0 });
-                buffer.Draw(3, 1, 0, 0);
+                buffer.BindIndexBuffer(indexBuffer, 0, VkIndexType.IndexTypeUint32);
+                buffer.DrawIndexed((uint)indices.Length, 1, 0, 0, 0);
                 buffer.EndRenderPass();
                 buffer.End();
             }
