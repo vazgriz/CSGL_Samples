@@ -93,7 +93,7 @@ namespace Samples {
         List<Framebuffer> swapchainFramebuffers;
         CommandPool commandPool;
         Buffer vertexBuffer;
-        DeviceMemory deviceMemory;
+        DeviceMemory vertexBufferMemory;
         List<CommandBuffer> commandBuffers;
         Semaphore imageAvailableSemaphore;
         Semaphore renderFinishedSemaphore;
@@ -125,7 +125,7 @@ namespace Samples {
         public void Dispose() {
             imageAvailableSemaphore.Dispose();
             renderFinishedSemaphore.Dispose();
-            deviceMemory.Dispose();
+            vertexBufferMemory.Dispose();
             vertexBuffer.Dispose();
             commandPool.Dispose();
             foreach (var fb in swapchainFramebuffers) fb.Dispose();
@@ -573,10 +573,10 @@ namespace Samples {
 
             var allocInfo = new MemoryAllocateInfo();
             allocInfo.allocationSize = buffer.Requirements.size;
-            allocInfo.memoryTypeIndex = FindMemoryType(vertexBuffer.Requirements.memoryTypeBits, properties);
+            allocInfo.memoryTypeIndex = FindMemoryType(buffer.Requirements.memoryTypeBits, properties);
 
             memory = new DeviceMemory(device, allocInfo);
-            buffer.Bind(deviceMemory, 0);
+            buffer.Bind(memory, 0);
         }
 
         void CreateVertexBuffer() {
@@ -590,16 +590,16 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = deviceMemory.Map(0, vertexBuffer.Requirements.size, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
             Interop.Copy(vertices, data);
-            deviceMemory.Unmap();
+            stagingBufferMemory.Unmap();
 
             CreateBuffer(bufferSize,
                 VkBufferUsageFlags.BufferUsageTransferDstBit
                 | VkBufferUsageFlags.BufferUsageVertexBufferBit,
                 VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
                 out vertexBuffer,
-                out deviceMemory);
+                out vertexBufferMemory);
 
             CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
