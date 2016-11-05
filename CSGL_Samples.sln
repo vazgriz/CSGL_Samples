@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IndexBuffer", "IndexBuffer\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniformBuffer", "UniformBuffer\UniformBuffer.csproj", "{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextureMapping", "TextureMapping\TextureMapping.csproj", "{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3823CA81-F3DF-47C7-B33B-150AADCF8DE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
