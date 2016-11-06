@@ -16,10 +16,12 @@ namespace Samples {
     public struct Vertex {
         public Vector3 position;
         public Vector3 color;
+        public Vector2 texCoord;
 
-        public Vertex(Vector3 position, Vector3 color) {
+        public Vertex(Vector3 position, Vector3 color, Vector2 texCoord) {
             this.position = position;
             this.color = color;
+            this.texCoord = texCoord;
         }
 
         public static VkVertexInputBindingDescription GetBindingDescription() {
@@ -33,19 +35,24 @@ namespace Samples {
 
         public static VkVertexInputAttributeDescription[] GetAttributeDescriptions() {
             Vertex v = new Vertex();
-            var a = new VkVertexInputAttributeDescription();
-            a.binding = 0;
-            a.location = 0;
-            a.format = VkFormat.FormatR32g32b32Sfloat;
-            a.offset = (uint)Interop.Offset(ref v, ref v.position);
+            var result = new VkVertexInputAttributeDescription[3];
 
-            var b = new VkVertexInputAttributeDescription();
-            b.binding = 0;
-            b.location = 1;
-            b.format = VkFormat.FormatR32g32b32Sfloat;
-            b.offset = (uint)Interop.Offset(ref v, ref v.color);
+            result[0].binding = 0;
+            result[0].location = 0;
+            result[0].format = VkFormat.FormatR32g32b32Sfloat;
+            result[0].offset = (uint)Interop.Offset(ref v, ref v.position);
+            
+            result[1].binding = 0;
+            result[1].location = 1;
+            result[1].format = VkFormat.FormatR32g32b32Sfloat;
+            result[1].offset = (uint)Interop.Offset(ref v, ref v.color);
 
-            return new VkVertexInputAttributeDescription[] { a, b };
+            result[2].binding = 0;
+            result[2].location = 2;
+            result[2].format = VkFormat.FormatR32g32Sfloat;
+            result[2].offset = (uint)Interop.Offset(ref v, ref v.texCoord);
+
+            return result;
         }
     }
 
@@ -79,10 +86,10 @@ namespace Samples {
         };
 
         Vertex[] vertices = {
-            new Vertex(new Vector3(-0.5f, -0.5f, 0), new Vector3(1, 0, 0)),
-            new Vertex(new Vector3(0.5f, -0.5f, 0), new Vector3(0, 1, 0)),
-            new Vertex(new Vector3(0.5f, 0.5f, 0), new Vector3(0, 0, 1)),
-            new Vertex(new Vector3(-0.5f, 0.5f, 0), new Vector3(1, 1, 1)),
+            new Vertex(new Vector3(-0.5f, -0.5f, 0), new Vector3(1, 0, 0), new Vector2(0, 0)),
+            new Vertex(new Vector3(0.5f, -0.5f, 0),  new Vector3(0, 1, 0), new Vector2(1, 0)),
+            new Vertex(new Vector3(0.5f, 0.5f, 0),   new Vector3(0, 0, 1), new Vector2(1, 1)),
+            new Vertex(new Vector3(-0.5f, 0.5f, 0),  new Vector3(1, 1, 1), new Vector2(0, 1)),
         };
 
         uint[] indices = {
@@ -116,6 +123,8 @@ namespace Samples {
         CommandPool commandPool;
         Image textureImage;
         DeviceMemory textureImageMemory;
+        ImageView textureImageView;
+        Sampler textureSampler;
         Buffer vertexBuffer;
         DeviceMemory vertexBufferMemory;
         Buffer indexBuffer;
@@ -151,6 +160,8 @@ namespace Samples {
             CreateFramebuffers();
             CreateCommandPool();
             CreateTextureImage();
+            CreateTextureImageView();
+            CreateTextureSampler();
             CreateVertexBuffer();
             CreateIndexBuffer();
             CreateUniformBuffer();
@@ -174,6 +185,8 @@ namespace Samples {
             indexBuffer.Dispose();
             vertexBufferMemory.Dispose();
             vertexBuffer.Dispose();
+            textureSampler.Dispose();
+            textureImageView.Dispose();
             textureImageMemory.Dispose();
             textureImage.Dispose();
             commandPool.Dispose();
@@ -455,6 +468,20 @@ namespace Samples {
             swapchainExtent = extent;
         }
 
+        void CreateImageView(Image image, VkFormat format, ref ImageView imageView) {
+            var info = new ImageViewCreateInfo(image);
+            info.viewType = VkImageViewType.ImageViewType2d;
+            info.format = format;
+            info.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            info.subresourceRange.baseMipLevel = 0; ;
+            info.subresourceRange.levelCount = 1;
+            info.subresourceRange.baseArrayLayer = 0;
+            info.subresourceRange.layerCount = 1;
+
+            imageView?.Dispose();
+            imageView = new ImageView(device, info);
+        }
+
         void CreateImageViews() {
             if (swapchainImageViews != null) {
                 foreach (var iv in swapchainImageViews) iv.Dispose();
@@ -462,20 +489,9 @@ namespace Samples {
 
             swapchainImageViews = new List<ImageView>();
             foreach (var image in swapchainImages) {
-                var info = new ImageViewCreateInfo(image);
-                info.viewType = VkImageViewType.ImageViewType2d;
-                info.format = swapchainImageFormat;
-                info.components.r = VkComponentSwizzle.ComponentSwizzleIdentity;
-                info.components.g = VkComponentSwizzle.ComponentSwizzleIdentity;
-                info.components.b = VkComponentSwizzle.ComponentSwizzleIdentity;
-                info.components.a = VkComponentSwizzle.ComponentSwizzleIdentity;
-                info.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
-                info.subresourceRange.baseMipLevel = 0;
-                info.subresourceRange.levelCount = 1;
-                info.subresourceRange.baseArrayLayer = 0;
-                info.subresourceRange.layerCount = 1;
-
-                swapchainImageViews.Add(new ImageView(device, info));
+                ImageView temp = null;
+                CreateImageView(image, swapchainImageFormat, ref temp);
+                swapchainImageViews.Add(temp);
             }
         }
 
@@ -523,8 +539,14 @@ namespace Samples {
             uboLayoutBinding.descriptorCount = 1;
             uboLayoutBinding.stageFlags = VkShaderStageFlags.ShaderStageVertexBit;
 
+            var samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
+            samplerLayoutBinding.binding = 1;
+            samplerLayoutBinding.descriptorCount = 1;
+            samplerLayoutBinding.descriptorType = VkDescriptorType.DescriptorTypeCombinedImageSampler;
+            samplerLayoutBinding.pImmutableSamplers = IntPtr.Zero;
+
             var info = new DescriptorSetLayoutCreateInfo();
-            info.bindings = new VkDescriptorSetLayoutBinding[] { uboLayoutBinding };
+            info.bindings = new VkDescriptorSetLayoutBinding[] { uboLayoutBinding, samplerLayoutBinding };
 
             descriptorSetLayout = new DescriptorSetLayout(device, info);
         }
@@ -678,41 +700,23 @@ namespace Samples {
 
                 ulong imageSize = (ulong)(bitmap.Width * bitmap.Height * 4);
 
+                //bitmap loads data as BGRA
+                //so we must swap the B and R values to get RGBA
 
-                //unsafe {
-                //    int length = data.Width * data.Height * 4;
-                //    byte* ptr = (byte*)data.Scan0;
+                unsafe
+                {
+                    int length = bitmapData.Width * bitmapData.Height * 4;
+                    byte* ptr = (byte*)bitmapData.Scan0;
 
-                //    var startR = ptr[0];
-                //    var startG = ptr[1];
-                //    var startB = ptr[2];
-                //    var startA = ptr[3];
-                //    bool alphaCorrect = true;
+                    for (int i = 0; i < length; i += 4) {
+                        byte* r = &ptr[i];
+                        byte* b = &ptr[i + 2];
 
-                //    for (int i = 0; i < length; i += 4) {
-                //        byte* r = &ptr[i];      //rotate each pixel of data
-                //        byte* g = &ptr[i + 1];
-                //        byte* b = &ptr[i + 2];
-                //        byte* a = &ptr[i + 3];
-
-                //        alphaCorrect = alphaCorrect && (*a == 255);
-
-                //        byte temp = *r;
-                //        *r = *g;
-                //        *g = *b;
-                //        *b = *a;
-                //        *a = temp;
-                //    }
-
-                //    var endR = ptr[0];
-                //    var endG = ptr[1];
-                //    var endB = ptr[2];
-                //    var endA = ptr[3];
-
-                //    Console.WriteLine("Alhpa correct: {0}", alphaCorrect);
-                //    Console.WriteLine("{0} {1} {2} {3}", startR, startG, startB, startA);
-                //    Console.WriteLine("{0} {1} {2} {3}", endR, endG, endB, endA);
-                //}
+                        byte temp = *r;
+                        *r = *b;
+                        *b = temp;
+                    }
+                }
 
                 Image stagingImage;
                 DeviceMemory stagingImageMemory;
@@ -748,6 +752,25 @@ namespace Samples {
                 stagingImageMemory.Dispose();
                 bitmap.UnlockBits(bitmapData);
             }
+        }
+
+        void CreateTextureImageView() {
+            CreateImageView(textureImage, VkFormat.FormatR8g8b8a8Unorm, ref textureImageView);
+        }
+
+        void CreateTextureSampler() {
+            var info = new SamplerCreateInfo();
+            info.magFilter = VkFilter.FilterLinear;
+            info.minFilter = VkFilter.FilterLinear;
+            info.addressModeU = VkSamplerAddressMode.SamplerAddressModeRepeat;
+            info.addressModeV = VkSamplerAddressMode.SamplerAddressModeRepeat;
+            info.addressModeW = VkSamplerAddressMode.SamplerAddressModeRepeat;
+            info.anisotropyEnable = true;
+            info.maxAnisotropy = 16;
+            info.borderColor = VkBorderColor.BorderColorFloatOpaqueBlack;
+            info.unnormalizedCoordinates = false;
+
+            textureSampler = new Sampler(device, info);
         }
 
         void CreateImage(uint width, uint height,
@@ -963,12 +986,14 @@ namespace Samples {
         }
 
         void CreateDescriptorPool() {
-            var poolSize = new VkDescriptorPoolSize();
-            poolSize.type = VkDescriptorType.DescriptorTypeUniformBuffer;
-            poolSize.descriptorCount = 1;
+            var poolSizes = new VkDescriptorPoolSize[2];
+            poolSizes[0].type = VkDescriptorType.DescriptorTypeUniformBuffer;
+            poolSizes[0].descriptorCount = 1;
+            poolSizes[1].type = VkDescriptorType.DescriptorTypeCombinedImageSampler;
+            poolSizes[1].descriptorCount = 1;
 
             var info = new DescriptorPoolCreateInfo();
-            info.poolSizes = new VkDescriptorPoolSize[] { poolSize };
+            info.poolSizes = poolSizes;
             info.maxSets = 1;
 
             descriptorPool = new DescriptorPool(device, info);
@@ -987,15 +1012,29 @@ namespace Samples {
             bufferInfo.offset = 0;
             bufferInfo.range = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var descriptorWrite = new WriteDescriptorSet();
-            descriptorWrite.dstSet = descriptorSet;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VkDescriptorType.DescriptorTypeUniformBuffer;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.bufferInfo = bufferInfo;
+            var imageInfo = new DescriptorImageInfo();
+            imageInfo.imageLayout = VkImageLayout.ImageLayoutShaderReadOnlyOptimal;
+            imageInfo.imageView = textureImageView;
+            imageInfo.sampler = textureSampler;
 
-            descriptorPool.Update(new WriteDescriptorSet[] { descriptorWrite });
+            var descriptorWrites = new WriteDescriptorSet[2];
+            descriptorWrites[0] = new WriteDescriptorSet();
+            descriptorWrites[0].dstSet = descriptorSet;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VkDescriptorType.DescriptorTypeUniformBuffer;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].bufferInfo = bufferInfo;
+
+            descriptorWrites[1] = new WriteDescriptorSet();
+            descriptorWrites[1].dstSet = descriptorSet;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VkDescriptorType.DescriptorTypeCombinedImageSampler;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].imageInfo = imageInfo;
+
+            descriptorPool.Update(descriptorWrites);
         }
 
         void CreateCommandBuffers() {
