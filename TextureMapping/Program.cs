@@ -543,7 +543,7 @@ namespace Samples {
             samplerLayoutBinding.binding = 1;
             samplerLayoutBinding.descriptorCount = 1;
             samplerLayoutBinding.descriptorType = VkDescriptorType.DescriptorTypeCombinedImageSampler;
-            samplerLayoutBinding.pImmutableSamplers = IntPtr.Zero;
+            samplerLayoutBinding.stageFlags = VkShaderStageFlags.ShaderStageFragmentBit;
 
             var info = new DescriptorSetLayoutCreateInfo();
             info.bindings = new VkDescriptorSetLayoutBinding[] { uboLayoutBinding, samplerLayoutBinding };
