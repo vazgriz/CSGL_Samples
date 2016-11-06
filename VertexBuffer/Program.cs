@@ -610,8 +610,7 @@ namespace Samples {
         void CopyBuffer(Buffer src, Buffer dst, ulong size) {
             var info = new CommandBufferAllocateInfo();
             info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.commandPool = commandPool;
-            info.count = 1;
+            info.commandBufferCount = 1;
 
             var buffers = commandPool.Allocate(info);
             var buffer = buffers[0];
@@ -656,9 +655,8 @@ namespace Samples {
             }
 
             var info = new CommandBufferAllocateInfo();
-            info.commandPool = commandPool;
             info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.count = (uint)swapchainFramebuffers.Count;
+            info.commandBufferCount = (uint)swapchainFramebuffers.Count;
 
             commandBuffers = new List<CommandBuffer>(commandPool.Allocate(info));
 

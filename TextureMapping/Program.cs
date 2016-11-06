@@ -10,6 +10,7 @@ using CSGL.GLFW;
 using CSGL.Vulkan;
 
 using Buffer = CSGL.Vulkan.Buffer;
+using Image = CSGL.Vulkan.Image;
 
 namespace Samples {
     public struct Vertex {
@@ -105,7 +106,7 @@ namespace Samples {
         PhysicalDevice physicalDevice;
         Device device;
         Swapchain swapchain;
-        List<CSGL.Vulkan.Image> swapchainImages;
+        List<Image> swapchainImages;
         List<ImageView> swapchainImageViews;
         RenderPass renderPass;
         DescriptorSetLayout descriptorSetLayout;
@@ -113,6 +114,8 @@ namespace Samples {
         Pipeline pipeline;
         List<Framebuffer> swapchainFramebuffers;
         CommandPool commandPool;
+        Image textureImage;
+        DeviceMemory textureImageMemory;
         Buffer vertexBuffer;
         DeviceMemory vertexBufferMemory;
         Buffer indexBuffer;
@@ -171,6 +174,8 @@ namespace Samples {
             indexBuffer.Dispose();
             vertexBufferMemory.Dispose();
             vertexBuffer.Dispose();
+            textureImageMemory.Dispose();
+            textureImage.Dispose();
             commandPool.Dispose();
             foreach (var fb in swapchainFramebuffers) fb.Dispose();
             pipeline.Dispose();
@@ -665,7 +670,197 @@ namespace Samples {
         }
 
         void CreateTextureImage() {
+            using (var bitmap = new Bitmap("lenna.png")) {
+                var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                    System.Drawing.Imaging.ImageLockMode.ReadOnly,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                var pixels = bitmapData.Scan0;
 
+                ulong imageSize = (ulong)(bitmap.Width * bitmap.Height * 4);
+
+
+                //unsafe {
+                //    int length = data.Width * data.Height * 4;
+                //    byte* ptr = (byte*)data.Scan0;
+
+                //    var startR = ptr[0];
+                //    var startG = ptr[1];
+                //    var startB = ptr[2];
+                //    var startA = ptr[3];
+                //    bool alphaCorrect = true;
+
+                //    for (int i = 0; i < length; i += 4) {
+                //        byte* r = &ptr[i];      //rotate each pixel of data
+                //        byte* g = &ptr[i + 1];
+                //        byte* b = &ptr[i + 2];
+                //        byte* a = &ptr[i + 3];
+
+                //        alphaCorrect = alphaCorrect && (*a == 255);
+
+                //        byte temp = *r;
+                //        *r = *g;
+                //        *g = *b;
+                //        *b = *a;
+                //        *a = temp;
+                //    }
+
+                //    var endR = ptr[0];
+                //    var endG = ptr[1];
+                //    var endB = ptr[2];
+                //    var endA = ptr[3];
+
+                //    Console.WriteLine("Alhpa correct: {0}", alphaCorrect);
+                //    Console.WriteLine("{0} {1} {2} {3}", startR, startG, startB, startA);
+                //    Console.WriteLine("{0} {1} {2} {3}", endR, endG, endB, endA);
+                //}
+
+                Image stagingImage;
+                DeviceMemory stagingImageMemory;
+
+                CreateImage((uint)bitmap.Width, (uint)bitmap.Height,
+                    VkFormat.FormatR8g8b8a8Unorm, VkImageTiling.ImageTilingLinear,
+                    VkImageUsageFlags.ImageUsageTransferSrcBit,
+                    VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit
+                    | VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit,
+                    out stagingImage, out stagingImageMemory);
+
+                var data = stagingImageMemory.Map(0, imageSize, VkMemoryMapFlags.None);
+                Interop.Copy(pixels, data, (long)imageSize);
+                stagingImageMemory.Unmap();
+
+                CreateImage((uint)bitmap.Width, (uint)bitmap.Height,
+                    VkFormat.FormatR8g8b8a8Unorm,
+                    VkImageTiling.ImageTilingLinear,
+                    VkImageUsageFlags.ImageUsageTransferDstBit | VkImageUsageFlags.ImageUsageSampledBit,
+                    VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                    out textureImage, out textureImageMemory);
+
+                TransitionImageLayout(stagingImage, VkFormat.FormatR8g8b8a8Unorm,
+                    VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferSrcOptimal);
+                TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
+                    VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferDstOptimal);
+                CopyImage(stagingImage, textureImage, (uint)bitmap.Width, (uint)bitmap.Height);
+
+                TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
+                    VkImageLayout.ImageLayoutTransferDstOptimal, VkImageLayout.ImageLayoutShaderReadOnlyOptimal);
+
+                stagingImage.Dispose();
+                stagingImageMemory.Dispose();
+                bitmap.UnlockBits(bitmapData);
+            }
+        }
+
+        void CreateImage(uint width, uint height,
+            VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
+            out Image image, out DeviceMemory memory) {
+
+            var info = new ImageCreateInfo();
+            info.imageType = VkImageType.ImageType2d;
+            info.extent.width = width;
+            info.extent.height = height;
+            info.extent.depth = 1;
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.format = format;
+            info.tiling = tiling;
+            info.initialLayout = VkImageLayout.ImageLayoutPreinitialized;
+            info.usage = usage;
+            info.sharingMode = VkSharingMode.SharingModeExclusive;
+            info.samples = VkSampleCountFlags.SampleCount1Bit;
+
+            image = new Image(device, info);
+
+            var req = image.MemoryRequirements;
+
+            var allocInfo = new MemoryAllocateInfo();
+            allocInfo.allocationSize = req.size;
+            allocInfo.memoryTypeIndex = FindMemoryType(req.memoryTypeBits, properties);
+
+            memory = new DeviceMemory(device, allocInfo);
+
+            image.Bind(memory, 0);
+        }
+
+        CommandBuffer BeginSingleTimeCommands() {
+            var commandBuffer = commandPool.Allocate(VkCommandBufferLevel.CommandBufferLevelPrimary);
+
+            var beginInfo = new CommandBufferBeginInfo();
+            beginInfo.flags = VkCommandBufferUsageFlags.CommandBufferUsageOneTimeSubmitBit;
+
+            commandBuffer.Begin(beginInfo);
+
+            return commandBuffer;
+        }
+
+        void EndSingleTimeCommand(CommandBuffer commandBuffer) {
+            commandBuffer.End();
+            var commands = new CommandBuffer[] { commandBuffer };
+
+            var info = new SubmitInfo();
+            info.commandBuffers = commands;
+
+            graphicsQueue.Submit(new SubmitInfo[] { info }, null);
+            graphicsQueue.WaitIdle();
+
+            commandPool.Free(commands);
+        }
+
+        void TransitionImageLayout(Image image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
+            var commandBuffer = BeginSingleTimeCommands();
+
+            var barrier = new ImageMemoryBarrier();
+            barrier.oldLayout = oldLayout;
+            barrier.newLayout = newLayout;
+            barrier.srcQueueFamilyIndex = uint.MaxValue;    //VK_QUEUE_FAMILY_IGNORED
+            barrier.dstQueueFamilyIndex = uint.MaxValue;
+            barrier.image = image;
+            barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
+
+            if (oldLayout == VkImageLayout.ImageLayoutPreinitialized && newLayout == VkImageLayout.ImageLayoutTransferSrcOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.AccessHostWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.AccessTransferReadBit;
+            } else if (oldLayout == VkImageLayout.ImageLayoutPreinitialized && newLayout == VkImageLayout.ImageLayoutTransferDstOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.AccessHostWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.AccessTransferWriteBit;
+            } else if (oldLayout == VkImageLayout.ImageLayoutTransferDstOptimal && newLayout == VkImageLayout.ImageLayoutShaderReadOnlyOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.AccessTransferWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.AccessShaderReadBit;
+            }
+
+            commandBuffer.PipelineBarrier(VkPipelineStageFlags.PipelineStageTopOfPipeBit, VkPipelineStageFlags.PipelineStageTopOfPipeBit,
+                VkDependencyFlags.None,
+                null, null, new ImageMemoryBarrier[] { barrier });
+
+            EndSingleTimeCommand(commandBuffer);
+        }
+
+        void CopyImage(Image srcImage, Image dstImage, uint width, uint height) {
+            var commandBuffer = BeginSingleTimeCommands();
+
+            var subresource = new VkImageSubresourceLayers();
+            subresource.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            subresource.baseArrayLayer = 0;
+            subresource.mipLevel = 0;
+            subresource.layerCount = 1;
+
+            var region = new VkImageCopy();
+            region.srcSubresource = subresource;
+            region.dstSubresource = subresource;
+            region.srcOffset = new VkOffset3D();
+            region.dstOffset = new VkOffset3D();
+            region.extent.width = width;
+            region.extent.height = height;
+            region.extent.depth = 1;
+
+            commandBuffer.Copy(srcImage, VkImageLayout.ImageLayoutTransferSrcOptimal,
+                dstImage, VkImageLayout.ImageLayoutTransferDstOptimal,
+                new VkImageCopy[] { region });
+
+            EndSingleTimeCommand(commandBuffer);
         }
 
         void CreateVertexBuffer() {
@@ -743,18 +938,7 @@ namespace Samples {
         }
 
         void CopyBuffer(Buffer src, Buffer dst, ulong size) {
-            var info = new CommandBufferAllocateInfo();
-            info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.commandPool = commandPool;
-            info.count = 1;
-
-            var buffers = commandPool.Allocate(info);
-            var buffer = buffers[0];
-
-            var beginInfo = new CommandBufferBeginInfo();
-            beginInfo.flags = VkCommandBufferUsageFlags.CommandBufferUsageOneTimeSubmitBit;
-
-            buffer.Begin(beginInfo);
+            var buffer = BeginSingleTimeCommands();
 
             VkBufferCopy region = new VkBufferCopy();
             region.srcOffset = 0;
@@ -762,15 +946,8 @@ namespace Samples {
             region.size = size;
 
             buffer.Copy(src, dst, new VkBufferCopy[] { region });
-            buffer.End();
 
-            var submitInfo = new SubmitInfo();
-            submitInfo.commandBuffers = new CommandBuffer[] { buffer };
-
-            graphicsQueue.Submit(new SubmitInfo[] { submitInfo }, null);
-            graphicsQueue.WaitIdle();
-
-            commandPool.Free(buffers);
+            EndSingleTimeCommand(buffer);
         }
 
         uint FindMemoryType(uint filter, VkMemoryPropertyFlags flags) {
@@ -827,9 +1004,8 @@ namespace Samples {
             }
 
             var info = new CommandBufferAllocateInfo();
-            info.commandPool = commandPool;
             info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.count = (uint)swapchainFramebuffers.Count;
+            info.commandBufferCount = (uint)swapchainFramebuffers.Count;
 
             commandBuffers = new List<CommandBuffer>(commandPool.Allocate(info));
 

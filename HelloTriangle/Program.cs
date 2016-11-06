@@ -517,9 +517,8 @@ namespace Samples {
             }
 
             var info = new CommandBufferAllocateInfo();
-            info.commandPool = commandPool;
             info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
-            info.count = (uint)swapchainFramebuffers.Count;
+            info.commandBufferCount = (uint)swapchainFramebuffers.Count;
 
             commandBuffers = new List<CommandBuffer>(commandPool.Allocate(info));
 

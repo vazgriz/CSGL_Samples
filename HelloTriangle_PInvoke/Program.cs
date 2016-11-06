@@ -202,11 +202,11 @@ namespace Samples {
             info.pApplicationInfo = appInfoMarshalled.Address;
 
             var extensions = GLFW.GetRequiredInstanceExceptions();
-            var extensionsMarshalled = new MarshalledStringArray(extensions);
+            var extensionsMarshalled = new NativeStringArray(extensions);
             info.ppEnabledExtensionNames = extensionsMarshalled.Address;
             info.enabledExtensionCount = (uint)extensions.Length;
 
-            var layersMarshalled = new MarshalledStringArray(layers);
+            var layersMarshalled = new NativeStringArray(layers);
             info.ppEnabledLayerNames = layersMarshalled.Address;
             info.enabledLayerCount = (uint)layers.Length;
 
@@ -288,7 +288,7 @@ namespace Samples {
             info.queueCreateInfoCount = 1;
             info.pEnabledFeatures = features.Address;
 
-            var extensionsMarshalled = new MarshalledStringArray(deviceExtensions);
+            var extensionsMarshalled = new NativeStringArray(deviceExtensions);
             info.ppEnabledExtensionNames = extensionsMarshalled.Address;
             info.enabledExtensionCount = (uint)deviceExtensions.Length;
 
