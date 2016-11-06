@@ -85,6 +85,8 @@ namespace Samples {
             "VK_KHR_swapchain"
         };
 
+        string image = "lenna.png";
+
         Vertex[] vertices = {
             new Vertex(new Vector3(-0.5f, -0.5f, 0), new Vector3(1, 0, 0), new Vector2(0, 0)),
             new Vertex(new Vector3(0.5f, -0.5f, 0),  new Vector3(0, 1, 0), new Vector2(1, 0)),
@@ -692,7 +694,7 @@ namespace Samples {
         }
 
         void CreateTextureImage() {
-            using (var bitmap = new Bitmap("lenna.png")) {
+            using (var bitmap = new Bitmap(image)) {
                 var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                     System.Drawing.Imaging.ImageLockMode.ReadOnly,
                     System.Drawing.Imaging.PixelFormat.Format32bppArgb);
