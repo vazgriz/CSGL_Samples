@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniformBuffer", "UniformBuf
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextureMapping", "TextureMapping\TextureMapping.csproj", "{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DepthBuffer", "DepthBuffer\DepthBuffer.csproj", "{81C903D3-D9F2-48EC-B226-324E52724C3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D00C28E9-9240-48BA-9F11-C7CCACA62F1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81C903D3-D9F2-48EC-B226-324E52724C3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81C903D3-D9F2-48EC-B226-324E52724C3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81C903D3-D9F2-48EC-B226-324E52724C3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81C903D3-D9F2-48EC-B226-324E52724C3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
