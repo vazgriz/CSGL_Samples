@@ -129,6 +129,9 @@ namespace Samples {
         Pipeline pipeline;
         List<Framebuffer> swapchainFramebuffers;
         CommandPool commandPool;
+        Image depthImage;
+        DeviceMemory depthImageMemory;
+        ImageView depthImageView;
         Image textureImage;
         DeviceMemory textureImageMemory;
         ImageView textureImageView;
@@ -165,8 +168,9 @@ namespace Samples {
             CreateRenderPass();
             CreateDescriptorSetLayout();
             CreateGraphicsPipeline();
-            CreateFramebuffers();
             CreateCommandPool();
+            CreateDepthResources();
+            CreateFramebuffers();
             CreateTextureImage();
             CreateTextureImageView();
             CreateTextureSampler();
@@ -197,6 +201,9 @@ namespace Samples {
             textureImageView.Dispose();
             textureImageMemory.Dispose();
             textureImage.Dispose();
+            depthImageView.Dispose();
+            depthImageMemory.Dispose();
+            depthImage.Dispose();
             commandPool.Dispose();
             foreach (var fb in swapchainFramebuffers) fb.Dispose();
             pipeline.Dispose();
@@ -303,6 +310,7 @@ namespace Samples {
             CreateImageViews();
             CreateRenderPass();
             CreateGraphicsPipeline();
+            CreateDepthResources();
             CreateFramebuffers();
             CreateCommandBuffers();
         }
@@ -476,11 +484,11 @@ namespace Samples {
             swapchainExtent = extent;
         }
 
-        void CreateImageView(Image image, VkFormat format, ref ImageView imageView) {
+        void CreateImageView(Image image, VkFormat format, VkImageAspectFlags aspectFlags, ref ImageView imageView) {
             var info = new ImageViewCreateInfo(image);
             info.viewType = VkImageViewType.ImageViewType2d;
             info.format = format;
-            info.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            info.subresourceRange.aspectMask = aspectFlags;
             info.subresourceRange.baseMipLevel = 0; ;
             info.subresourceRange.levelCount = 1;
             info.subresourceRange.baseArrayLayer = 0;
@@ -498,7 +506,7 @@ namespace Samples {
             swapchainImageViews = new List<ImageView>();
             foreach (var image in swapchainImages) {
                 ImageView temp = null;
-                CreateImageView(image, swapchainImageFormat, ref temp);
+                CreateImageView(image, swapchainImageFormat, VkImageAspectFlags.ImageAspectColorBit, ref temp);
                 swapchainImageViews.Add(temp);
             }
         }
@@ -514,13 +522,28 @@ namespace Samples {
             colorAttachment.initialLayout = VkImageLayout.ImageLayoutUndefined;
             colorAttachment.finalLayout = VkImageLayout.ImageLayoutPresentSrcKhr;
 
+            var depthAttachment = new VkAttachmentDescription();
+            depthAttachment.format = FindDepthFormat();
+            depthAttachment.samples = VkSampleCountFlags.SampleCount1Bit;
+            depthAttachment.loadOp = VkAttachmentLoadOp.AttachmentLoadOpClear;
+            depthAttachment.storeOp = VkAttachmentStoreOp.AttachmentStoreOpDontCare;
+            depthAttachment.stencilLoadOp = VkAttachmentLoadOp.AttachmentLoadOpDontCare;
+            depthAttachment.stencilStoreOp = VkAttachmentStoreOp.AttachmentStoreOpDontCare;
+            depthAttachment.initialLayout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
+            depthAttachment.finalLayout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
+
             var colorAttachmentRef = new VkAttachmentReference();
             colorAttachmentRef.attachment = 0;
             colorAttachmentRef.layout = VkImageLayout.ImageLayoutColorAttachmentOptimal;
 
+            var depthAttachmentRef = new VkAttachmentReference();
+            depthAttachmentRef.attachment = 1;
+            depthAttachmentRef.layout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
+
             var subpass = new SubpassDescription();
             subpass.PipelineBindPoint = VkPipelineBindPoint.PipelineBindPointGraphics;
             subpass.ColorAttachments = new VkAttachmentReference[] { colorAttachmentRef };
+            subpass.DepthStencilAttachment = depthAttachmentRef;
 
             var dependency = new VkSubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
@@ -532,7 +555,7 @@ namespace Samples {
                                     | VkAccessFlags.AccessColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.Attachments = new VkAttachmentDescription[] { colorAttachment };
+            info.Attachments = new VkAttachmentDescription[] { colorAttachment, depthAttachment };
             info.Subpasses = new SubpassDescription[] { subpass };
             info.Dependencies = new VkSubpassDependency[] { dependency };
 
@@ -626,6 +649,15 @@ namespace Samples {
             colorBlending.logicOp = VkLogicOp.LogicOpCopy;
             colorBlending.attachments = new PipelineColorBlendAttachmentState[] { colorBlendAttachment };
 
+            var depthStencil = new PipelineDepthStencilStateCreateInfo();
+            depthStencil.depthTestEnable = true;
+            depthStencil.depthWriteEnable = true;
+            depthStencil.depthCompareOp = VkCompareOp.CompareOpLess;
+            depthStencil.depthBoundsTestEnable = false;
+            depthStencil.minDepthBounds = 0;
+            depthStencil.maxDepthBounds = 1;
+            depthStencil.stencilTestEnable = false;
+
             var pipelineLayoutInfo = new PipelineLayoutCreateInfo();
             pipelineLayoutInfo.setLayouts = new DescriptorSetLayout[] { descriptorSetLayout };
 
@@ -641,6 +673,7 @@ namespace Samples {
             info.rasterizationState = rasterizer;
             info.multisampleState = multisampling;
             info.colorBlendState = colorBlending;
+            info.depthStencilState = depthStencil;
             info.layout = pipelineLayout;
             info.renderPass = renderPass;
             info.subpass = 0;
@@ -663,7 +696,7 @@ namespace Samples {
             swapchainFramebuffers = new List<Framebuffer>(swapchainImageViews.Count);
 
             for (int i = 0; i < swapchainImageViews.Count; i++) {
-                var attachments = new ImageView[] { swapchainImageViews[i] };
+                var attachments = new ImageView[] { swapchainImageViews[i], depthImageView };
 
                 var info = new FramebufferCreateInfo();
                 info.renderPass = renderPass;
@@ -681,6 +714,47 @@ namespace Samples {
             info.QueueFamilyIndex = graphicsIndex;
 
             commandPool = new CommandPool(device, info);
+        }
+
+        void CreateDepthResources() {
+            depthImage?.Dispose();
+            depthImageMemory?.Dispose();
+            depthImageView?.Dispose();
+
+            VkFormat depthFormat = FindDepthFormat();
+            CreateImage(swapchainExtent.width, swapchainExtent.height, depthFormat,
+                VkImageTiling.ImageTilingOptimal, VkImageUsageFlags.ImageUsageDepthStencilAttachmentBit,
+                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                out depthImage, out depthImageMemory);
+
+            CreateImageView(depthImage, depthFormat, VkImageAspectFlags.ImageAspectDepthBit, ref depthImageView);
+
+            TransitionImageLayout(depthImage, depthFormat, VkImageLayout.ImageLayoutUndefined, VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal);
+        }
+
+        VkFormat FindSupportedFormat(List<VkFormat> candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+            foreach (var format in candidates) {
+                var props = physicalDevice.GetFormatProperties(format);
+
+                if (tiling == VkImageTiling.ImageTilingLinear && (props.linearTilingFeatures & features) == features) {
+                    return format;
+                } else if (tiling == VkImageTiling.ImageTilingOptimal && (props.optimalTilingFeatures & features) == features) {
+                    return format;
+                }
+            }
+
+            throw new Exception("Failed to find supported format");
+        }
+
+        VkFormat FindDepthFormat() {
+            return FindSupportedFormat(
+                new List<VkFormat>() { VkFormat.FormatD32Sfloat, VkFormat.FormatD32SfloatS8Uint, VkFormat.FormatD24UnormS8Uint },
+                VkImageTiling.ImageTilingOptimal,
+                VkFormatFeatureFlags.FormatFeatureDepthStencilAttachmentBit);
+        }
+
+        bool HasStencilComponent(VkFormat format) {
+            return format == VkFormat.FormatD32SfloatS8Uint || format == VkFormat.FormatD24UnormS8Uint;
         }
 
         void CreateBuffer(ulong size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory memory) {
@@ -763,7 +837,7 @@ namespace Samples {
         }
 
         void CreateTextureImageView() {
-            CreateImageView(textureImage, VkFormat.FormatR8g8b8a8Unorm, ref textureImageView);
+            CreateImageView(textureImage, VkFormat.FormatR8g8b8a8Unorm, VkImageAspectFlags.ImageAspectColorBit, ref textureImageView);
         }
 
         void CreateTextureSampler() {
@@ -845,7 +919,18 @@ namespace Samples {
             barrier.srcQueueFamilyIndex = uint.MaxValue;    //VK_QUEUE_FAMILY_IGNORED
             barrier.dstQueueFamilyIndex = uint.MaxValue;
             barrier.image = image;
-            barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+
+            if (newLayout == VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal) {
+                barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectDepthBit;
+
+                if (HasStencilComponent(format)) {
+                    barrier.subresourceRange.aspectMask |= VkImageAspectFlags.ImageAspectStencilBit;
+                }
+            } else {
+                barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            }
+
+
             barrier.subresourceRange.baseMipLevel = 0;
             barrier.subresourceRange.levelCount = 1;
             barrier.subresourceRange.baseArrayLayer = 0;
@@ -860,6 +945,11 @@ namespace Samples {
             } else if (oldLayout == VkImageLayout.ImageLayoutTransferDstOptimal && newLayout == VkImageLayout.ImageLayoutShaderReadOnlyOptimal) {
                 barrier.srcAccessMask = VkAccessFlags.AccessTransferWriteBit;
                 barrier.dstAccessMask = VkAccessFlags.AccessShaderReadBit;
+            } else if (oldLayout == VkImageLayout.ImageLayoutUndefined && newLayout == VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.None;
+                barrier.dstAccessMask = VkAccessFlags.AccessDepthStencilAttachmentReadBit | VkAccessFlags.AccessDepthStencilAttachmentWriteBit;
+            } else {
+                throw new Exception("Unsupported layout transition");
             }
 
             commandBuffer.PipelineBarrier(VkPipelineStageFlags.PipelineStageTopOfPipeBit, VkPipelineStageFlags.PipelineStageTopOfPipeBit,
@@ -1068,13 +1158,15 @@ namespace Samples {
                 renderPassInfo.framebuffer = swapchainFramebuffers[i];
                 renderPassInfo.renderArea.extent = swapchainExtent;
 
-                VkClearValue clearColor = new VkClearValue();
-                clearColor.color.float32_0 = 0;
-                clearColor.color.float32_1 = 0;
-                clearColor.color.float32_2 = 0;
-                clearColor.color.float32_3 = 1f;
+                var clearValues = new VkClearValue[2];
+                clearValues[0].color.float32_0 = 0;
+                clearValues[0].color.float32_1 = 0;
+                clearValues[0].color.float32_2 = 0;
+                clearValues[0].color.float32_3 = 1f;
+                clearValues[1].depthStencil.depth = 1;
+                clearValues[1].depthStencil.stencil = 0;
 
-                renderPassInfo.clearValues = new VkClearValue[] { clearColor };
+                renderPassInfo.clearValues = clearValues;
 
                 buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.SubpassContentsInline);
                 buffer.BindPipeline(VkPipelineBindPoint.PipelineBindPointGraphics, pipeline);
