@@ -86,23 +86,10 @@ namespace Samples {
         };
 
         string image = "chalet.jpg";
+        string model = "chalet.mesh";
 
-        Vertex[] vertices = {
-            new Vertex(new Vector3(-1f, -1f, 0), new Vector3(1, 0, 0), new Vector2(0, 0)),
-            new Vertex(new Vector3(1f, -1f, 0),  new Vector3(0, 1, 0), new Vector2(1, 0)),
-            new Vertex(new Vector3(1f, 1f, 0),   new Vector3(0, 0, 1), new Vector2(1, 1)),
-            new Vertex(new Vector3(-1f, 1f, 0),  new Vector3(1, 1, 1), new Vector2(0, 1)),
-
-            new Vertex(new Vector3(-1f, -1f, -0.5f), new Vector3(1, 0, 0), new Vector2(0, 0)),
-            new Vertex(new Vector3(1f, -1f, -0.5f),  new Vector3(0, 1, 0), new Vector2(1, 0)),
-            new Vertex(new Vector3(1f, 1f, -0.5f),   new Vector3(0, 0, 1), new Vector2(1, 1)),
-            new Vertex(new Vector3(-1f, 1f, -0.5f),  new Vector3(1, 1, 1), new Vector2(0, 1)),
-        };
-
-        uint[] indices = {
-            0, 1, 2, 2, 3, 0,
-            4, 5, 6, 6, 7, 4
-        };
+        Vertex[] vertices = null;
+        uint[] indices = null;
 
         int width = 800;
         int height = 600;
@@ -157,6 +144,7 @@ namespace Samples {
         void Run() {
             GLFW.Init();
             Vulkan.Init();
+            LoadModel();
             CreateWindow();
             CreateInstance();
             PickPhysicalDevice();
@@ -324,6 +312,35 @@ namespace Samples {
             GLFW.WindowHint(WindowHint.ClientAPI, (int)ClientAPI.NoAPI);
             GLFW.WindowHint(WindowHint.Visible, 0);
             window = GLFW.CreateWindow(width, height, "Vulkan Test", MonitorPtr.Null, WindowPtr.Null);
+        }
+
+        void LoadModel() {
+            using (var fs = File.OpenRead(model))
+            using (var reader = new BinaryReader(fs)) { //this is a proprietary binary mesh format
+                int numVertices = reader.ReadInt32();
+                float[] data = new float[numVertices * 5];  //x y z and u v
+                vertices = new Vertex[numVertices];
+
+                for (int i = 0; i < data.Length; i++) { //file only has position and uv attributes stored
+                    data[i] = reader.ReadSingle();
+                }
+
+                for (int i = 0; i < numVertices; i++) {
+                    int index = i * 5;
+                    vertices[i].position.X = data[index];
+                    vertices[i].position.Y = data[index + 1];
+                    vertices[i].position.Z = data[index + 2];
+                    vertices[i].texCoord.X = data[index + 3];
+                    vertices[i].texCoord.Y = 1f - data[index + 4];
+                }
+
+                int numIndices = reader.ReadInt32();
+                indices = new uint[numIndices];
+
+                for (int i = 0; i < numIndices; i++) {
+                    indices[i] = reader.ReadUInt32();
+                }
+            }
         }
 
         void CreateInstance() {
