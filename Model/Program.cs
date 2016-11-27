@@ -143,7 +143,6 @@ namespace Samples {
 
         void Run() {
             GLFW.Init();
-            Vulkan.Init();
             LoadModel();
             CreateWindow();
             CreateInstance();

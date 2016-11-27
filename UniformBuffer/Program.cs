@@ -132,7 +132,6 @@ namespace Samples {
 
         void Run() {
             GLFW.Init();
-            Vulkan.Init();
             CreateWindow();
             CreateInstance();
             PickPhysicalDevice();
