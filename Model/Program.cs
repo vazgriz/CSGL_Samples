@@ -790,66 +790,46 @@ namespace Samples {
         }
 
         void CreateTextureImage() {
-            using (var bitmap = new Bitmap(image)) {
-                var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                    System.Drawing.Imaging.ImageLockMode.ReadOnly,
-                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                var pixels = bitmapData.Scan0;
+            byte[] texData = File.ReadAllBytes(image);
+            int width;
+            int height;
+            int comp;
+            var pixels = STB.STB.Load(texData, out width, out height, out comp, 4);
 
-                ulong imageSize = (ulong)(bitmap.Width * bitmap.Height * 4);
+            ulong imageSize = (ulong)(width * height * 4);
 
-                //bitmap loads data as BGRA
-                //so we must swap the B and R values to get RGBA
+            Image stagingImage;
+            DeviceMemory stagingImageMemory;
 
-                unsafe
-                {
-                    int length = bitmapData.Width * bitmapData.Height * 4;
-                    byte* ptr = (byte*)bitmapData.Scan0;
+            CreateImage((uint)width, (uint)height,
+                VkFormat.FormatR8g8b8a8Unorm, VkImageTiling.ImageTilingLinear,
+                VkImageUsageFlags.ImageUsageTransferSrcBit,
+                VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit
+                | VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit,
+                out stagingImage, out stagingImageMemory);
 
-                    for (int i = 0; i < length; i += 4) {
-                        byte* r = &ptr[i];
-                        byte* b = &ptr[i + 2];
+            var data = stagingImageMemory.Map(0, imageSize, VkMemoryMapFlags.None);
+            Interop.Copy(pixels, data, (int)imageSize);
+            stagingImageMemory.Unmap();
 
-                        byte temp = *r;
-                        *r = *b;
-                        *b = temp;
-                    }
-                }
+            CreateImage((uint)width, (uint)height,
+                VkFormat.FormatR8g8b8a8Unorm,
+                VkImageTiling.ImageTilingLinear,
+                VkImageUsageFlags.ImageUsageTransferDstBit | VkImageUsageFlags.ImageUsageSampledBit,
+                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                out textureImage, out textureImageMemory);
 
-                Image stagingImage;
-                DeviceMemory stagingImageMemory;
+            TransitionImageLayout(stagingImage, VkFormat.FormatR8g8b8a8Unorm,
+                VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferSrcOptimal);
+            TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
+                VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferDstOptimal);
+            CopyImage(stagingImage, textureImage, (uint)width, (uint)height);
 
-                CreateImage((uint)bitmap.Width, (uint)bitmap.Height,
-                    VkFormat.FormatR8g8b8a8Unorm, VkImageTiling.ImageTilingLinear,
-                    VkImageUsageFlags.ImageUsageTransferSrcBit,
-                    VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit
-                    | VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit,
-                    out stagingImage, out stagingImageMemory);
+            TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
+                VkImageLayout.ImageLayoutTransferDstOptimal, VkImageLayout.ImageLayoutShaderReadOnlyOptimal);
 
-                var data = stagingImageMemory.Map(0, imageSize, VkMemoryMapFlags.None);
-                Interop.Copy(pixels, data, (long)imageSize);
-                stagingImageMemory.Unmap();
-
-                CreateImage((uint)bitmap.Width, (uint)bitmap.Height,
-                    VkFormat.FormatR8g8b8a8Unorm,
-                    VkImageTiling.ImageTilingLinear,
-                    VkImageUsageFlags.ImageUsageTransferDstBit | VkImageUsageFlags.ImageUsageSampledBit,
-                    VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
-                    out textureImage, out textureImageMemory);
-
-                TransitionImageLayout(stagingImage, VkFormat.FormatR8g8b8a8Unorm,
-                    VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferSrcOptimal);
-                TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
-                    VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferDstOptimal);
-                CopyImage(stagingImage, textureImage, (uint)bitmap.Width, (uint)bitmap.Height);
-
-                TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
-                    VkImageLayout.ImageLayoutTransferDstOptimal, VkImageLayout.ImageLayoutShaderReadOnlyOptimal);
-
-                stagingImage.Dispose();
-                stagingImageMemory.Dispose();
-                bitmap.UnlockBits(bitmapData);
-            }
+            stagingImage.Dispose();
+            stagingImageMemory.Dispose();
         }
 
         void CreateTextureImageView() {

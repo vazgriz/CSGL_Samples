@@ -39,7 +39,6 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics.Vectors, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Numerics.Vectors.4.1.1\lib\portable-net45+win8+wp8+wpa81\System.Numerics.Vectors.dll</HintPath>
       <Private>True</Private>
@@ -72,11 +71,18 @@
     <Content Include="Lenna.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="stb_native.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpGameLibrary\CSharpGameLibrary\CSharpGameLibrary.csproj">
       <Project>{d7103402-1c84-4921-af9c-38d9a6231e7a}</Project>
       <Name>CSharpGameLibrary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CSharpGameLibrary\STB\STB.csproj">
+      <Project>{69ee75bc-2e89-41c8-bf0a-b35c59dcdce5}</Project>
+      <Name>STB</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
