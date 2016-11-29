@@ -381,9 +381,9 @@ namespace Samples {
                                     | VkAccessFlags.AccessColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.Attachments = new VkAttachmentDescription[] { colorAttachment };
-            info.Subpasses = new SubpassDescription[] { subpass };
-            info.Dependencies = new VkSubpassDependency[] { dependency };
+            info.attachments = new VkAttachmentDescription[] { colorAttachment };
+            info.subpasses = new SubpassDescription[] { subpass };
+            info.dependencies = new VkSubpassDependency[] { dependency };
 
             renderPass?.Dispose();
             renderPass = new RenderPass(device, info);
