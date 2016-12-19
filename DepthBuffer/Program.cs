@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 
 using CSGL;
+using CSGL.STB;
 using CSGL.GLFW;
 using CSGL.Vulkan;
 
@@ -28,7 +29,7 @@ namespace Samples {
             var result = new VkVertexInputBindingDescription();
             result.binding = 0;
             result.stride = (uint)Interop.SizeOf<Vertex>();
-            result.inputRate = VkVertexInputRate.VertexInputRateVertex;
+            result.inputRate = VkVertexInputRate.Vertex;
 
             return result;
         }
@@ -39,17 +40,17 @@ namespace Samples {
 
             result[0].binding = 0;
             result[0].location = 0;
-            result[0].format = VkFormat.FormatR32g32b32Sfloat;
+            result[0].format = VkFormat.R32g32b32Sfloat;
             result[0].offset = (uint)Interop.Offset(ref v, ref v.position);
             
             result[1].binding = 0;
             result[1].location = 1;
-            result[1].format = VkFormat.FormatR32g32b32Sfloat;
+            result[1].format = VkFormat.R32g32b32Sfloat;
             result[1].offset = (uint)Interop.Offset(ref v, ref v.color);
 
             result[2].binding = 0;
             result[2].location = 2;
-            result[2].format = VkFormat.FormatR32g32Sfloat;
+            result[2].format = VkFormat.R32g32Sfloat;
             result[2].offset = (uint)Interop.Offset(ref v, ref v.texCoord);
 
             return result;
@@ -220,7 +221,7 @@ namespace Samples {
 
         void MainLoop() {
             var waitSemaphores = new Semaphore[] { imageAvailableSemaphore };
-            var waitStages = new VkPipelineStageFlags[] { VkPipelineStageFlags.PipelineStageColorAttachmentOutputBit };
+            var waitStages = new VkPipelineStageFlags[] { VkPipelineStageFlags.ColorAttachmentOutputBit };
             var signalSemaphores = new Semaphore[] { renderFinishedSemaphore };
             var swapchains = new Swapchain[] { swapchain };
 
@@ -354,7 +355,7 @@ namespace Samples {
 
             for (int i = 0; i < physicalDevice.QueueFamilies.Count; i++) {
                 var family = physicalDevice.QueueFamilies[i];
-                if ((family.Flags & VkQueueFlags.QueueGraphicsBit) != 0) {
+                if ((family.Flags & VkQueueFlags.GraphicsBit) != 0) {
                     g = i;
                 }
 
@@ -397,15 +398,15 @@ namespace Samples {
         }
 
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(List<VkSurfaceFormatKHR> formats) {
-            if (formats.Count == 1 && formats[0].format == VkFormat.FormatUndefined) {
+            if (formats.Count == 1 && formats[0].format == VkFormat.Undefined) {
                 var result = new VkSurfaceFormatKHR();
-                result.format = VkFormat.FormatB8g8r8a8Unorm;
-                result.colorSpace = VkColorSpaceKHR.ColorSpaceSrgbNonlinearKhr;
+                result.format = VkFormat.B8g8r8a8Unorm;
+                result.colorSpace = VkColorSpaceKHR.SrgbNonlinearKhr;
                 return result;
             }
 
             foreach (var f in formats) {
-                if (f.format == VkFormat.FormatB8g8r8a8Unorm && f.colorSpace == VkColorSpaceKHR.ColorSpaceSrgbNonlinearKhr) {
+                if (f.format == VkFormat.B8g8r8a8Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
                     return f;
                 }
             }
@@ -415,12 +416,12 @@ namespace Samples {
 
         VkPresentModeKHR ChooseSwapPresentMode(List<VkPresentModeKHR> modes) {
             foreach (var m in modes) {
-                if (m == VkPresentModeKHR.PresentModeMailboxKhr) {
+                if (m == VkPresentModeKHR.MailboxKhr) {
                     return m;
                 }
             }
 
-            return VkPresentModeKHR.PresentModeFifoKhr;
+            return VkPresentModeKHR.FifoKhr;
         }
 
         VkExtent2D ChooseSwapExtent(ref VkSurfaceCapabilitiesKHR cap) {
@@ -458,19 +459,19 @@ namespace Samples {
             info.imageColorSpace = surfaceFormat.colorSpace;
             info.imageExtent = extent;
             info.imageArrayLayers = 1;
-            info.imageUsage = VkImageUsageFlags.ImageUsageColorAttachmentBit;
+            info.imageUsage = VkImageUsageFlags.ColorAttachmentBit;
 
             var queueFamilyIndices = new uint[] { graphicsIndex, presentIndex };
 
             if (graphicsIndex != presentIndex) {
-                info.imageSharingMode = VkSharingMode.SharingModeConcurrent;
+                info.imageSharingMode = VkSharingMode.Concurrent;
                 info.queueFamilyIndices = queueFamilyIndices;
             } else {
-                info.imageSharingMode = VkSharingMode.SharingModeExclusive;
+                info.imageSharingMode = VkSharingMode.Exclusive;
             }
 
             info.preTransform = cap.currentTransform;
-            info.compositeAlpha = VkCompositeAlphaFlagsKHR.CompositeAlphaOpaqueBitKhr;
+            info.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueBitKhr;
             info.presentMode = mode;
             info.clipped = true;
 
@@ -485,7 +486,7 @@ namespace Samples {
 
         void CreateImageView(Image image, VkFormat format, VkImageAspectFlags aspectFlags, ref ImageView imageView) {
             var info = new ImageViewCreateInfo(image);
-            info.viewType = VkImageViewType.ImageViewType2d;
+            info.viewType = VkImageViewType._2d;
             info.format = format;
             info.subresourceRange.aspectMask = aspectFlags;
             info.subresourceRange.baseMipLevel = 0; ;
@@ -505,7 +506,7 @@ namespace Samples {
             swapchainImageViews = new List<ImageView>();
             foreach (var image in swapchainImages) {
                 ImageView temp = null;
-                CreateImageView(image, swapchainImageFormat, VkImageAspectFlags.ImageAspectColorBit, ref temp);
+                CreateImageView(image, swapchainImageFormat, VkImageAspectFlags.ColorBit, ref temp);
                 swapchainImageViews.Add(temp);
             }
         }
@@ -513,45 +514,45 @@ namespace Samples {
         void CreateRenderPass() {
             var colorAttachment = new VkAttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
-            colorAttachment.samples = VkSampleCountFlags.SampleCount1Bit;
-            colorAttachment.loadOp = VkAttachmentLoadOp.AttachmentLoadOpClear;
-            colorAttachment.storeOp = VkAttachmentStoreOp.AttachmentStoreOpStore;
-            colorAttachment.stencilLoadOp = VkAttachmentLoadOp.AttachmentLoadOpDontCare;
-            colorAttachment.stencilStoreOp = VkAttachmentStoreOp.AttachmentStoreOpDontCare;
-            colorAttachment.initialLayout = VkImageLayout.ImageLayoutUndefined;
-            colorAttachment.finalLayout = VkImageLayout.ImageLayoutPresentSrcKhr;
+            colorAttachment.samples = VkSampleCountFlags._1Bit;
+            colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
+            colorAttachment.storeOp = VkAttachmentStoreOp.Store;
+            colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
+            colorAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
+            colorAttachment.initialLayout = VkImageLayout.Undefined;
+            colorAttachment.finalLayout = VkImageLayout.PresentSrcKhr;
 
             var depthAttachment = new VkAttachmentDescription();
             depthAttachment.format = FindDepthFormat();
-            depthAttachment.samples = VkSampleCountFlags.SampleCount1Bit;
-            depthAttachment.loadOp = VkAttachmentLoadOp.AttachmentLoadOpClear;
-            depthAttachment.storeOp = VkAttachmentStoreOp.AttachmentStoreOpDontCare;
-            depthAttachment.stencilLoadOp = VkAttachmentLoadOp.AttachmentLoadOpDontCare;
-            depthAttachment.stencilStoreOp = VkAttachmentStoreOp.AttachmentStoreOpDontCare;
-            depthAttachment.initialLayout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
-            depthAttachment.finalLayout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
+            depthAttachment.samples = VkSampleCountFlags._1Bit;
+            depthAttachment.loadOp = VkAttachmentLoadOp.Clear;
+            depthAttachment.storeOp = VkAttachmentStoreOp.DontCare;
+            depthAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
+            depthAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
+            depthAttachment.initialLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+            depthAttachment.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
 
             var colorAttachmentRef = new VkAttachmentReference();
             colorAttachmentRef.attachment = 0;
-            colorAttachmentRef.layout = VkImageLayout.ImageLayoutColorAttachmentOptimal;
+            colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
 
             var depthAttachmentRef = new VkAttachmentReference();
             depthAttachmentRef.attachment = 1;
-            depthAttachmentRef.layout = VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal;
+            depthAttachmentRef.layout = VkImageLayout.DepthStencilAttachmentOptimal;
 
             var subpass = new SubpassDescription();
-            subpass.PipelineBindPoint = VkPipelineBindPoint.PipelineBindPointGraphics;
+            subpass.PipelineBindPoint = VkPipelineBindPoint.Graphics;
             subpass.ColorAttachments = new VkAttachmentReference[] { colorAttachmentRef };
             subpass.DepthStencilAttachment = depthAttachmentRef;
 
             var dependency = new VkSubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
             dependency.dstSubpass = 0;
-            dependency.srcStageMask = VkPipelineStageFlags.PipelineStageBottomOfPipeBit;
-            dependency.srcAccessMask = VkAccessFlags.AccessMemoryReadBit;
-            dependency.dstStageMask = VkPipelineStageFlags.PipelineStageColorAttachmentOutputBit;
-            dependency.dstAccessMask = VkAccessFlags.AccessColorAttachmentReadBit
-                                    | VkAccessFlags.AccessColorAttachmentWriteBit;
+            dependency.srcStageMask = VkPipelineStageFlags.BottomOfPipeBit;
+            dependency.srcAccessMask = VkAccessFlags.MemoryReadBit;
+            dependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutputBit;
+            dependency.dstAccessMask = VkAccessFlags.ColorAttachmentReadBit
+                                    | VkAccessFlags.ColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
             info.attachments = new VkAttachmentDescription[] { colorAttachment, depthAttachment };
@@ -565,15 +566,15 @@ namespace Samples {
         void CreateDescriptorSetLayout() {
             var uboLayoutBinding = new VkDescriptorSetLayoutBinding();
             uboLayoutBinding.binding = 0;
-            uboLayoutBinding.descriptorType = VkDescriptorType.DescriptorTypeUniformBuffer;
+            uboLayoutBinding.descriptorType = VkDescriptorType.UniformBuffer;
             uboLayoutBinding.descriptorCount = 1;
-            uboLayoutBinding.stageFlags = VkShaderStageFlags.ShaderStageVertexBit;
+            uboLayoutBinding.stageFlags = VkShaderStageFlags.VertexBit;
 
             var samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
             samplerLayoutBinding.binding = 1;
             samplerLayoutBinding.descriptorCount = 1;
-            samplerLayoutBinding.descriptorType = VkDescriptorType.DescriptorTypeCombinedImageSampler;
-            samplerLayoutBinding.stageFlags = VkShaderStageFlags.ShaderStageFragmentBit;
+            samplerLayoutBinding.descriptorType = VkDescriptorType.CombinedImageSampler;
+            samplerLayoutBinding.stageFlags = VkShaderStageFlags.FragmentBit;
 
             var info = new DescriptorSetLayoutCreateInfo();
             info.bindings = new VkDescriptorSetLayoutBinding[] { uboLayoutBinding, samplerLayoutBinding };
@@ -591,12 +592,12 @@ namespace Samples {
             var frag = CreateShaderModule(File.ReadAllBytes("frag.spv"));
 
             var vertInfo = new PipelineShaderStageCreateInfo();
-            vertInfo.stage = VkShaderStageFlags.ShaderStageVertexBit;
+            vertInfo.stage = VkShaderStageFlags.VertexBit;
             vertInfo.module = vert;
             vertInfo.name = "main";
 
             var fragInfo = new PipelineShaderStageCreateInfo();
-            fragInfo.stage = VkShaderStageFlags.ShaderStageFragmentBit;
+            fragInfo.stage = VkShaderStageFlags.FragmentBit;
             fragInfo.module = frag;
             fragInfo.name = "main";
 
@@ -607,7 +608,7 @@ namespace Samples {
             vertexInputInfo.vertexAttributeDescriptions = Vertex.GetAttributeDescriptions();
 
             var inputAssembly = new PipelineInputAssemblyStateCreateInfo();
-            inputAssembly.topology = VkPrimitiveTopology.PrimitiveTopologyTriangleList;
+            inputAssembly.topology = VkPrimitiveTopology.TriangleList;
 
             var viewport = new VkViewport();
             viewport.width = swapchainExtent.width;
@@ -623,35 +624,35 @@ namespace Samples {
             viewportState.scissors = new VkRect2D[] { scissor };
 
             var rasterizer = new PipelineRasterizationStateCreateInfo();
-            rasterizer.polygonMode = VkPolygonMode.PolygonModeFill;
+            rasterizer.polygonMode = VkPolygonMode.Fill;
             rasterizer.lineWidth = 1f;
-            rasterizer.cullMode = VkCullModeFlags.CullModeBackBit;
-            rasterizer.frontFace = VkFrontFace.FrontFaceCounterClockwise;
+            rasterizer.cullMode = VkCullModeFlags.BackBit;
+            rasterizer.frontFace = VkFrontFace.CounterClockwise;
 
             var multisampling = new PipelineMultisampleStateCreateInfo();
-            multisampling.rasterizationSamples = VkSampleCountFlags.SampleCount1Bit;
+            multisampling.rasterizationSamples = VkSampleCountFlags._1Bit;
             multisampling.minSampleShading = 1f;
 
             var colorBlendAttachment = new PipelineColorBlendAttachmentState();
-            colorBlendAttachment.colorWriteMask = VkColorComponentFlags.ColorComponentRBit
-                                                | VkColorComponentFlags.ColorComponentGBit
-                                                | VkColorComponentFlags.ColorComponentBBit
-                                                | VkColorComponentFlags.ColorComponentABit;
-            colorBlendAttachment.srcColorBlendFactor = VkBlendFactor.BlendFactorOne;
-            colorBlendAttachment.dstColorBlendFactor = VkBlendFactor.BlendFactorZero;
-            colorBlendAttachment.colorBlendOp = VkBlendOp.BlendOpAdd;
-            colorBlendAttachment.srcAlphaBlendFactor = VkBlendFactor.BlendFactorOne;
-            colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor.BlendFactorZero;
-            colorBlendAttachment.alphaBlendOp = VkBlendOp.BlendOpAdd;
+            colorBlendAttachment.colorWriteMask = VkColorComponentFlags.RBit
+                                                | VkColorComponentFlags.GBit
+                                                | VkColorComponentFlags.BBit
+                                                | VkColorComponentFlags.ABit;
+            colorBlendAttachment.srcColorBlendFactor = VkBlendFactor.One;
+            colorBlendAttachment.dstColorBlendFactor = VkBlendFactor.Zero;
+            colorBlendAttachment.colorBlendOp = VkBlendOp.Add;
+            colorBlendAttachment.srcAlphaBlendFactor = VkBlendFactor.One;
+            colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor.Zero;
+            colorBlendAttachment.alphaBlendOp = VkBlendOp.Add;
 
             var colorBlending = new PipelineColorBlendStateCreateInfo();
-            colorBlending.logicOp = VkLogicOp.LogicOpCopy;
+            colorBlending.logicOp = VkLogicOp.Copy;
             colorBlending.attachments = new PipelineColorBlendAttachmentState[] { colorBlendAttachment };
 
             var depthStencil = new PipelineDepthStencilStateCreateInfo();
             depthStencil.depthTestEnable = true;
             depthStencil.depthWriteEnable = true;
-            depthStencil.depthCompareOp = VkCompareOp.CompareOpLess;
+            depthStencil.depthCompareOp = VkCompareOp.Less;
             depthStencil.depthBoundsTestEnable = false;
             depthStencil.minDepthBounds = 0;
             depthStencil.maxDepthBounds = 1;
@@ -722,22 +723,22 @@ namespace Samples {
 
             VkFormat depthFormat = FindDepthFormat();
             CreateImage(swapchainExtent.width, swapchainExtent.height, depthFormat,
-                VkImageTiling.ImageTilingOptimal, VkImageUsageFlags.ImageUsageDepthStencilAttachmentBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                VkImageTiling.Optimal, VkImageUsageFlags.DepthStencilAttachmentBit,
+                VkMemoryPropertyFlags.DeviceLocalBit,
                 out depthImage, out depthImageMemory);
 
-            CreateImageView(depthImage, depthFormat, VkImageAspectFlags.ImageAspectDepthBit, ref depthImageView);
+            CreateImageView(depthImage, depthFormat, VkImageAspectFlags.DepthBit, ref depthImageView);
 
-            TransitionImageLayout(depthImage, depthFormat, VkImageLayout.ImageLayoutUndefined, VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal);
+            TransitionImageLayout(depthImage, depthFormat, VkImageLayout.Undefined, VkImageLayout.DepthStencilAttachmentOptimal);
         }
 
         VkFormat FindSupportedFormat(List<VkFormat> candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
             foreach (var format in candidates) {
                 var props = physicalDevice.GetFormatProperties(format);
 
-                if (tiling == VkImageTiling.ImageTilingLinear && (props.linearTilingFeatures & features) == features) {
+                if (tiling == VkImageTiling.Linear && (props.linearTilingFeatures & features) == features) {
                     return format;
-                } else if (tiling == VkImageTiling.ImageTilingOptimal && (props.optimalTilingFeatures & features) == features) {
+                } else if (tiling == VkImageTiling.Optimal && (props.optimalTilingFeatures & features) == features) {
                     return format;
                 }
             }
@@ -747,20 +748,20 @@ namespace Samples {
 
         VkFormat FindDepthFormat() {
             return FindSupportedFormat(
-                new List<VkFormat>() { VkFormat.FormatD32Sfloat, VkFormat.FormatD32SfloatS8Uint, VkFormat.FormatD24UnormS8Uint },
-                VkImageTiling.ImageTilingOptimal,
-                VkFormatFeatureFlags.FormatFeatureDepthStencilAttachmentBit);
+                new List<VkFormat>() { VkFormat.D32Sfloat, VkFormat.D32SfloatS8Uint, VkFormat.D24UnormS8Uint },
+                VkImageTiling.Optimal,
+                VkFormatFeatureFlags.DepthStencilAttachmentBit);
         }
 
         bool HasStencilComponent(VkFormat format) {
-            return format == VkFormat.FormatD32SfloatS8Uint || format == VkFormat.FormatD24UnormS8Uint;
+            return format == VkFormat.D32SfloatS8Uint || format == VkFormat.D24UnormS8Uint;
         }
 
         void CreateBuffer(ulong size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory memory) {
             var info = new BufferCreateInfo();
             info.size = size;
             info.usage = usage;
-            info.sharingMode = VkSharingMode.SharingModeExclusive;
+            info.sharingMode = VkSharingMode.Exclusive;
 
             buffer = new Buffer(device, info);
 
@@ -777,7 +778,7 @@ namespace Samples {
             int width;
             int height;
             int comp;
-            var pixels = STB.STB.Load(texData, out width, out height, out comp, 4);
+            var pixels = STB.Load(texData, out width, out height, out comp, 4);
 
             ulong imageSize = (ulong)(width * height * 4);
 
@@ -785,10 +786,10 @@ namespace Samples {
             DeviceMemory stagingImageMemory;
 
             CreateImage((uint)width, (uint)height,
-                VkFormat.FormatR8g8b8a8Unorm, VkImageTiling.ImageTilingLinear,
-                VkImageUsageFlags.ImageUsageTransferSrcBit,
-                VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit
-                | VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit,
+                VkFormat.R8g8b8a8Unorm, VkImageTiling.Linear,
+                VkImageUsageFlags.TransferSrcBit,
+                VkMemoryPropertyFlags.HostCoherentBit
+                | VkMemoryPropertyFlags.HostVisibleBit,
                 out stagingImage, out stagingImageMemory);
 
             var data = stagingImageMemory.Map(0, imageSize, VkMemoryMapFlags.None);
@@ -796,39 +797,39 @@ namespace Samples {
             stagingImageMemory.Unmap();
 
             CreateImage((uint)width, (uint)height,
-                VkFormat.FormatR8g8b8a8Unorm,
-                VkImageTiling.ImageTilingLinear,
-                VkImageUsageFlags.ImageUsageTransferDstBit | VkImageUsageFlags.ImageUsageSampledBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                VkFormat.R8g8b8a8Unorm,
+                VkImageTiling.Linear,
+                VkImageUsageFlags.TransferDstBit | VkImageUsageFlags.SampledBit,
+                VkMemoryPropertyFlags.DeviceLocalBit,
                 out textureImage, out textureImageMemory);
 
-            TransitionImageLayout(stagingImage, VkFormat.FormatR8g8b8a8Unorm,
-                VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferSrcOptimal);
-            TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
-                VkImageLayout.ImageLayoutPreinitialized, VkImageLayout.ImageLayoutTransferDstOptimal);
+            TransitionImageLayout(stagingImage, VkFormat.R8g8b8a8Unorm,
+                VkImageLayout.Preinitialized, VkImageLayout.TransferSrcOptimal);
+            TransitionImageLayout(textureImage, VkFormat.R8g8b8a8Unorm,
+                VkImageLayout.Preinitialized, VkImageLayout.TransferDstOptimal);
             CopyImage(stagingImage, textureImage, (uint)width, (uint)height);
 
-            TransitionImageLayout(textureImage, VkFormat.FormatR8g8b8a8Unorm,
-                VkImageLayout.ImageLayoutTransferDstOptimal, VkImageLayout.ImageLayoutShaderReadOnlyOptimal);
+            TransitionImageLayout(textureImage, VkFormat.R8g8b8a8Unorm,
+                VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal);
 
             stagingImage.Dispose();
             stagingImageMemory.Dispose();
         }
 
         void CreateTextureImageView() {
-            CreateImageView(textureImage, VkFormat.FormatR8g8b8a8Unorm, VkImageAspectFlags.ImageAspectColorBit, ref textureImageView);
+            CreateImageView(textureImage, VkFormat.R8g8b8a8Unorm, VkImageAspectFlags.ColorBit, ref textureImageView);
         }
 
         void CreateTextureSampler() {
             var info = new SamplerCreateInfo();
-            info.magFilter = VkFilter.FilterLinear;
-            info.minFilter = VkFilter.FilterLinear;
-            info.addressModeU = VkSamplerAddressMode.SamplerAddressModeRepeat;
-            info.addressModeV = VkSamplerAddressMode.SamplerAddressModeRepeat;
-            info.addressModeW = VkSamplerAddressMode.SamplerAddressModeRepeat;
+            info.magFilter = VkFilter.Linear;
+            info.minFilter = VkFilter.Linear;
+            info.addressModeU = VkSamplerAddressMode.Repeat;
+            info.addressModeV = VkSamplerAddressMode.Repeat;
+            info.addressModeW = VkSamplerAddressMode.Repeat;
             info.anisotropyEnable = true;
             info.maxAnisotropy = 16;
-            info.borderColor = VkBorderColor.BorderColorFloatOpaqueBlack;
+            info.borderColor = VkBorderColor.FloatOpaqueBlack;
             info.unnormalizedCoordinates = false;
 
             textureSampler = new Sampler(device, info);
@@ -839,7 +840,7 @@ namespace Samples {
             out Image image, out DeviceMemory memory) {
 
             var info = new ImageCreateInfo();
-            info.imageType = VkImageType.ImageType2d;
+            info.imageType = VkImageType._2d;
             info.extent.width = width;
             info.extent.height = height;
             info.extent.depth = 1;
@@ -847,10 +848,10 @@ namespace Samples {
             info.arrayLayers = 1;
             info.format = format;
             info.tiling = tiling;
-            info.initialLayout = VkImageLayout.ImageLayoutPreinitialized;
+            info.initialLayout = VkImageLayout.Preinitialized;
             info.usage = usage;
-            info.sharingMode = VkSharingMode.SharingModeExclusive;
-            info.samples = VkSampleCountFlags.SampleCount1Bit;
+            info.sharingMode = VkSharingMode.Exclusive;
+            info.samples = VkSampleCountFlags._1Bit;
 
             image = new Image(device, info);
 
@@ -866,10 +867,10 @@ namespace Samples {
         }
 
         CommandBuffer BeginSingleTimeCommands() {
-            var commandBuffer = commandPool.Allocate(VkCommandBufferLevel.CommandBufferLevelPrimary);
+            var commandBuffer = commandPool.Allocate(VkCommandBufferLevel.Primary);
 
             var beginInfo = new CommandBufferBeginInfo();
-            beginInfo.flags = VkCommandBufferUsageFlags.CommandBufferUsageOneTimeSubmitBit;
+            beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmitBit;
 
             commandBuffer.Begin(beginInfo);
 
@@ -899,14 +900,14 @@ namespace Samples {
             barrier.dstQueueFamilyIndex = uint.MaxValue;
             barrier.image = image;
 
-            if (newLayout == VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal) {
-                barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectDepthBit;
+            if (newLayout == VkImageLayout.DepthStencilAttachmentOptimal) {
+                barrier.subresourceRange.aspectMask = VkImageAspectFlags.DepthBit;
 
                 if (HasStencilComponent(format)) {
-                    barrier.subresourceRange.aspectMask |= VkImageAspectFlags.ImageAspectStencilBit;
+                    barrier.subresourceRange.aspectMask |= VkImageAspectFlags.StencilBit;
                 }
             } else {
-                barrier.subresourceRange.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+                barrier.subresourceRange.aspectMask = VkImageAspectFlags.ColorBit;
             }
 
 
@@ -915,23 +916,23 @@ namespace Samples {
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount = 1;
 
-            if (oldLayout == VkImageLayout.ImageLayoutPreinitialized && newLayout == VkImageLayout.ImageLayoutTransferSrcOptimal) {
-                barrier.srcAccessMask = VkAccessFlags.AccessHostWriteBit;
-                barrier.dstAccessMask = VkAccessFlags.AccessTransferReadBit;
-            } else if (oldLayout == VkImageLayout.ImageLayoutPreinitialized && newLayout == VkImageLayout.ImageLayoutTransferDstOptimal) {
-                barrier.srcAccessMask = VkAccessFlags.AccessHostWriteBit;
-                barrier.dstAccessMask = VkAccessFlags.AccessTransferWriteBit;
-            } else if (oldLayout == VkImageLayout.ImageLayoutTransferDstOptimal && newLayout == VkImageLayout.ImageLayoutShaderReadOnlyOptimal) {
-                barrier.srcAccessMask = VkAccessFlags.AccessTransferWriteBit;
-                barrier.dstAccessMask = VkAccessFlags.AccessShaderReadBit;
-            } else if (oldLayout == VkImageLayout.ImageLayoutUndefined && newLayout == VkImageLayout.ImageLayoutDepthStencilAttachmentOptimal) {
+            if (oldLayout == VkImageLayout.Preinitialized && newLayout == VkImageLayout.TransferSrcOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.HostWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.TransferReadBit;
+            } else if (oldLayout == VkImageLayout.Preinitialized && newLayout == VkImageLayout.TransferDstOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.HostWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.TransferWriteBit;
+            } else if (oldLayout == VkImageLayout.TransferDstOptimal && newLayout == VkImageLayout.ShaderReadOnlyOptimal) {
+                barrier.srcAccessMask = VkAccessFlags.TransferWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.ShaderReadBit;
+            } else if (oldLayout == VkImageLayout.Undefined && newLayout == VkImageLayout.DepthStencilAttachmentOptimal) {
                 barrier.srcAccessMask = VkAccessFlags.None;
-                barrier.dstAccessMask = VkAccessFlags.AccessDepthStencilAttachmentReadBit | VkAccessFlags.AccessDepthStencilAttachmentWriteBit;
+                barrier.dstAccessMask = VkAccessFlags.DepthStencilAttachmentReadBit | VkAccessFlags.DepthStencilAttachmentWriteBit;
             } else {
                 throw new Exception("Unsupported layout transition");
             }
 
-            commandBuffer.PipelineBarrier(VkPipelineStageFlags.PipelineStageTopOfPipeBit, VkPipelineStageFlags.PipelineStageTopOfPipeBit,
+            commandBuffer.PipelineBarrier(VkPipelineStageFlags.TopOfPipeBit, VkPipelineStageFlags.TopOfPipeBit,
                 VkDependencyFlags.None,
                 null, null, new ImageMemoryBarrier[] { barrier });
 
@@ -942,7 +943,7 @@ namespace Samples {
             var commandBuffer = BeginSingleTimeCommands();
 
             var subresource = new VkImageSubresourceLayers();
-            subresource.aspectMask = VkImageAspectFlags.ImageAspectColorBit;
+            subresource.aspectMask = VkImageAspectFlags.ColorBit;
             subresource.baseArrayLayer = 0;
             subresource.mipLevel = 0;
             subresource.layerCount = 1;
@@ -956,8 +957,8 @@ namespace Samples {
             region.extent.height = height;
             region.extent.depth = 1;
 
-            commandBuffer.Copy(srcImage, VkImageLayout.ImageLayoutTransferSrcOptimal,
-                dstImage, VkImageLayout.ImageLayoutTransferDstOptimal,
+            commandBuffer.Copy(srcImage, VkImageLayout.TransferSrcOptimal,
+                dstImage, VkImageLayout.TransferDstOptimal,
                 new VkImageCopy[] { region });
 
             EndSingleTimeCommand(commandBuffer);
@@ -968,9 +969,9 @@ namespace Samples {
             Buffer stagingBuffer;
             DeviceMemory stagingBufferMemory;
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferSrcBit,
-                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
-                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit,
+                VkBufferUsageFlags.TransferSrcBit,
+                VkMemoryPropertyFlags.HostVisibleBit
+                | VkMemoryPropertyFlags.HostCoherentBit,
                 out stagingBuffer,
                 out stagingBufferMemory);
 
@@ -979,9 +980,9 @@ namespace Samples {
             stagingBufferMemory.Unmap();
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferDstBit
-                | VkBufferUsageFlags.BufferUsageVertexBufferBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                VkBufferUsageFlags.TransferDstBit
+                | VkBufferUsageFlags.VertexBufferBit,
+                VkMemoryPropertyFlags.DeviceLocalBit,
                 out vertexBuffer,
                 out vertexBufferMemory);
 
@@ -996,9 +997,9 @@ namespace Samples {
             Buffer stagingBuffer;
             DeviceMemory stagingBufferMemory;
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferSrcBit,
-                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
-                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit,
+                VkBufferUsageFlags.TransferSrcBit,
+                VkMemoryPropertyFlags.HostVisibleBit
+                | VkMemoryPropertyFlags.HostCoherentBit,
                 out stagingBuffer,
                 out stagingBufferMemory);
 
@@ -1007,9 +1008,9 @@ namespace Samples {
             stagingBufferMemory.Unmap();
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferDstBit
-                | VkBufferUsageFlags.BufferUsageIndexBufferBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                VkBufferUsageFlags.TransferDstBit
+                | VkBufferUsageFlags.IndexBufferBit,
+                VkMemoryPropertyFlags.DeviceLocalBit,
                 out indexBuffer,
                 out indexBufferMemory);
 
@@ -1023,16 +1024,16 @@ namespace Samples {
             ulong bufferSize = (ulong)Interop.SizeOf<UniformBufferObject>();
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferSrcBit,
-                VkMemoryPropertyFlags.MemoryPropertyHostVisibleBit
-                | VkMemoryPropertyFlags.MemoryPropertyHostCoherentBit,
+                VkBufferUsageFlags.TransferSrcBit,
+                VkMemoryPropertyFlags.HostVisibleBit
+                | VkMemoryPropertyFlags.HostCoherentBit,
                 out uniformStagingBuffer,
                 out uniformStagingBufferMemory);
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.BufferUsageTransferDstBit
-                | VkBufferUsageFlags.BufferUsageUniformBufferBit,
-                VkMemoryPropertyFlags.MemoryPropertyDeviceLocalBit,
+                VkBufferUsageFlags.TransferDstBit
+                | VkBufferUsageFlags.UniformBufferBit,
+                VkMemoryPropertyFlags.DeviceLocalBit,
                 out uniformBuffer,
                 out uniformBufferMemory);
         }
@@ -1064,9 +1065,9 @@ namespace Samples {
 
         void CreateDescriptorPool() {
             var poolSizes = new VkDescriptorPoolSize[2];
-            poolSizes[0].type = VkDescriptorType.DescriptorTypeUniformBuffer;
+            poolSizes[0].type = VkDescriptorType.UniformBuffer;
             poolSizes[0].descriptorCount = 1;
-            poolSizes[1].type = VkDescriptorType.DescriptorTypeCombinedImageSampler;
+            poolSizes[1].type = VkDescriptorType.CombinedImageSampler;
             poolSizes[1].descriptorCount = 1;
 
             var info = new DescriptorPoolCreateInfo();
@@ -1090,7 +1091,7 @@ namespace Samples {
             bufferInfo.range = (ulong)Interop.SizeOf<UniformBufferObject>();
 
             var imageInfo = new DescriptorImageInfo();
-            imageInfo.imageLayout = VkImageLayout.ImageLayoutShaderReadOnlyOptimal;
+            imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
             imageInfo.imageView = textureImageView;
             imageInfo.sampler = textureSampler;
 
@@ -1099,7 +1100,7 @@ namespace Samples {
             descriptorWrites[0].dstSet = descriptorSet;
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VkDescriptorType.DescriptorTypeUniformBuffer;
+            descriptorWrites[0].descriptorType = VkDescriptorType.UniformBuffer;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].bufferInfo = bufferInfo;
 
@@ -1107,7 +1108,7 @@ namespace Samples {
             descriptorWrites[1].dstSet = descriptorSet;
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VkDescriptorType.DescriptorTypeCombinedImageSampler;
+            descriptorWrites[1].descriptorType = VkDescriptorType.CombinedImageSampler;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].imageInfo = imageInfo;
 
@@ -1120,7 +1121,7 @@ namespace Samples {
             }
 
             var info = new CommandBufferAllocateInfo();
-            info.level = VkCommandBufferLevel.CommandBufferLevelPrimary;
+            info.level = VkCommandBufferLevel.Primary;
             info.commandBufferCount = (uint)swapchainFramebuffers.Count;
 
             commandBuffers = new List<CommandBuffer>(commandPool.Allocate(info));
@@ -1128,7 +1129,7 @@ namespace Samples {
             for (int i = 0; i < commandBuffers.Count; i++) {
                 var buffer = commandBuffers[i];
                 var beginInfo = new CommandBufferBeginInfo();
-                beginInfo.flags = VkCommandBufferUsageFlags.CommandBufferUsageSimultaneousUseBit;
+                beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUseBit;
 
                 buffer.Begin(beginInfo);
 
@@ -1147,11 +1148,11 @@ namespace Samples {
 
                 renderPassInfo.clearValues = clearValues;
 
-                buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.SubpassContentsInline);
-                buffer.BindPipeline(VkPipelineBindPoint.PipelineBindPointGraphics, pipeline);
+                buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.Inline);
+                buffer.BindPipeline(VkPipelineBindPoint.Graphics, pipeline);
                 buffer.BindVertexBuffers(0, new Buffer[] { vertexBuffer }, new ulong[] { 0 });
-                buffer.BindIndexBuffer(indexBuffer, 0, VkIndexType.IndexTypeUint32);
-                buffer.BindDescriptorSets(VkPipelineBindPoint.PipelineBindPointGraphics, pipelineLayout, 0, new DescriptorSet[] { descriptorSet });
+                buffer.BindIndexBuffer(indexBuffer, 0, VkIndexType.Uint32);
+                buffer.BindDescriptorSets(VkPipelineBindPoint.Graphics, pipelineLayout, 0, new DescriptorSet[] { descriptorSet });
                 buffer.DrawIndexed((uint)indices.Length, 1, 0, 0, 0);
                 buffer.EndRenderPass();
                 buffer.End();
