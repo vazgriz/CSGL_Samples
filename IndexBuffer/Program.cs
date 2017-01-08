@@ -7,6 +7,7 @@ using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
 
+using Image = CSGL.Vulkan.Image;
 using Buffer = CSGL.Vulkan.Buffer;
 
 namespace Samples {
@@ -231,7 +232,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = GLFW.GetRequiredInstanceExceptions();
+            var extensions = GLFW_VK.GetRequiredInstanceExceptions();
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -382,7 +383,7 @@ namespace Samples {
             swapchain = new Swapchain(device, info);
             oldSwapchain?.Dispose();
 
-            swapchainImages = swapchain.Images;
+            swapchainImages = new List<Image>(swapchain.Images);
 
             swapchainImageFormat = surfaceFormat.format;
             swapchainExtent = extent;

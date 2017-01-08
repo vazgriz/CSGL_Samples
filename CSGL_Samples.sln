@@ -23,7 +23,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DepthBuffer", "DepthBuffer\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Model", "Model\Model.csproj", "{62C7A135-EBE6-4836-88FF-C55B8D571BCB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STB", "..\CSharpGameLibrary\STB\STB.csproj", "{69EE75BC-2E89-41C8-BF0A-B35C59DCDCE5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSGL.Vulkan", "..\CSharpGameLibrary\CSGL.Vulkan\CSGL.Vulkan.csproj", "{F3E51928-2259-4AED-9581-E7D4C49EA957}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSGL.STB", "..\CSharpGameLibrary\STB\CSGL.STB.csproj", "{69EE75BC-2E89-41C8-BF0A-B35C59DCDCE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +73,10 @@ Global
 		{62C7A135-EBE6-4836-88FF-C55B8D571BCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62C7A135-EBE6-4836-88FF-C55B8D571BCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62C7A135-EBE6-4836-88FF-C55B8D571BCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3E51928-2259-4AED-9581-E7D4C49EA957}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3E51928-2259-4AED-9581-E7D4C49EA957}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3E51928-2259-4AED-9581-E7D4C49EA957}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3E51928-2259-4AED-9581-E7D4C49EA957}.Release|Any CPU.Build.0 = Release|Any CPU
 		{69EE75BC-2E89-41C8-BF0A-B35C59DCDCE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{69EE75BC-2E89-41C8-BF0A-B35C59DCDCE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{69EE75BC-2E89-41C8-BF0A-B35C59DCDCE5}.Release|Any CPU.ActiveCfg = Release|Any CPU

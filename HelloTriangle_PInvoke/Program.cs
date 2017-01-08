@@ -201,7 +201,7 @@ namespace Samples {
             info.sType = VkStructureType.InstanceCreateInfo;
             info.pApplicationInfo = appInfoMarshalled.Address;
 
-            var extensions = GLFW.GetRequiredInstanceExceptions();
+            var extensions = GLFW_VK.GetRequiredInstanceExceptions();
             var extensionsMarshalled = new NativeStringArray(extensions);
             info.ppEnabledExtensionNames = extensionsMarshalled.Address;
             info.enabledExtensionCount = (uint)extensions.Length;
@@ -219,7 +219,7 @@ namespace Samples {
         }
 
         void CreateSurface() {
-            var result = GLFW.CreateWindowSurface(instance, window, alloc, out surface);
+            var result = GLFW_VK.CreateWindowSurface(instance, window, alloc, out surface);
 
         }
 
