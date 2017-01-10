@@ -291,13 +291,13 @@ namespace Samples {
             int p = -1;
 
             for (int i = 0; i < count; i++) {
-                if (queues.Count > 0 && (queues[i].queueFlags & VkQueueFlags.GraphicsBit) != 0) {
+                if (queues[i].queueCount > 0 && (queues[i].queueFlags & VkQueueFlags.GraphicsBit) != 0) {
                     g = i;
                 }
 
-                bool support = false;
+                bool support;
                 VK.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint)i, surface, out support);
-                if (queues.Count > 0 && support) {
+                if (queues[i].queueCount > 0 && support) {
                     p = i;
                 }
             }
@@ -332,7 +332,7 @@ namespace Samples {
             var info = new VkDeviceCreateInfo();
             info.sType = VkStructureType.DeviceCreateInfo;
             info.pQueueCreateInfos = queueInfos.Address;
-            info.queueCreateInfoCount = 1;
+            info.queueCreateInfoCount = (uint)uniqueIndices.Count;
             info.pEnabledFeatures = features.Address;
 
             var extensionsMarshalled = new NativeStringArray(deviceExtensions);
