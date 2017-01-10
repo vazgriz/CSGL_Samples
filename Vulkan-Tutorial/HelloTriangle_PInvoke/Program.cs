@@ -244,13 +244,13 @@ namespace Samples {
             int p = -1;
 
             for (int i = 0; i < count; i++) {
-                if (queues[i].queueCount > 0 && (queues[i].queueFlags & VkQueueFlags.GraphicsBit) != 0) {
+                if (g == -1 && queues[i].queueCount > 0 && (queues[i].queueFlags & VkQueueFlags.GraphicsBit) != 0) {
                     g = i;
                 }
 
                 bool support;
                 VK.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint)i, surface, out support);
-                if (queues[i].queueCount > 0 && support) {
+                if (p == -1 && queues[i].queueCount > 0 && support) {
                     p = i;
                 }
             }
