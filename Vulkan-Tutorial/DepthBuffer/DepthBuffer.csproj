@@ -76,15 +76,15 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CSharpGameLibrary\CSGL.Vulkan\CSGL.Vulkan.csproj">
+    <ProjectReference Include="..\..\..\CSharpGameLibrary\CSGL.Vulkan\CSGL.Vulkan.csproj">
       <Project>{f3e51928-2259-4aed-9581-e7d4c49ea957}</Project>
       <Name>CSGL.Vulkan</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\CSharpGameLibrary\CSharpGameLibrary\CSharpGameLibrary.csproj">
+    <ProjectReference Include="..\..\..\CSharpGameLibrary\CSharpGameLibrary\CSharpGameLibrary.csproj">
       <Project>{d7103402-1c84-4921-af9c-38d9a6231e7a}</Project>
       <Name>CSharpGameLibrary</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\CSharpGameLibrary\STB\CSGL.STB.csproj">
+    <ProjectReference Include="..\..\..\CSharpGameLibrary\STB\CSGL.STB.csproj">
       <Project>{69ee75bc-2e89-41c8-bf0a-b35c59dcdce5}</Project>
       <Name>CSGL.STB</Name>
     </ProjectReference>

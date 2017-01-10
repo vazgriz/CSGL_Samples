@@ -1099,7 +1099,7 @@ namespace Samples {
             var info = new DescriptorSetAllocateInfo();
             info.descriptorSetCount = 1;
             info.setLayouts = layouts;
-
+            
             descriptorSet = descriptorPool.Allocate(info)[0];
 
             var bufferInfo = new DescriptorBufferInfo();
