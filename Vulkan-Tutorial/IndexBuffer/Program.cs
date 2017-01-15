@@ -299,7 +299,7 @@ namespace Samples {
             var formats = surface.Formats;
             var modes = surface.PresentModes;
 
-            return new SwapchainSupport(cap, formats, modes);
+            return new SwapchainSupport(cap, new List<VkSurfaceFormatKHR>(formats), new List<VkPresentModeKHR>(modes));
         }
 
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(List<VkSurfaceFormatKHR> formats) {
