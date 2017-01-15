@@ -507,7 +507,7 @@ namespace Samples {
 
         void CreateCommandPool() {
             var info = new CommandPoolCreateInfo();
-            info.QueueFamilyIndex = graphicsIndex;
+            info.queueFamilyIndex = graphicsIndex;
 
             commandPool = new CommandPool(device, info);
         }
