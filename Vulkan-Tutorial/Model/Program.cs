@@ -34,26 +34,28 @@ namespace Samples {
             return result;
         }
 
-        public static VkVertexInputAttributeDescription[] GetAttributeDescriptions() {
+        public static List<VkVertexInputAttributeDescription> GetAttributeDescriptions() {
             Vertex v = new Vertex();
-            var result = new VkVertexInputAttributeDescription[3];
 
-            result[0].binding = 0;
-            result[0].location = 0;
-            result[0].format = VkFormat.R32g32b32Sfloat;
-            result[0].offset = (uint)Interop.Offset(ref v, ref v.position);
-            
-            result[1].binding = 0;
-            result[1].location = 1;
-            result[1].format = VkFormat.R32g32b32Sfloat;
-            result[1].offset = (uint)Interop.Offset(ref v, ref v.color);
+            var desc1 = new VkVertexInputAttributeDescription();
+            desc1.binding = 0;
+            desc1.location = 0;
+            desc1.format = VkFormat.R32g32b32Sfloat;
+            desc1.offset = (uint)Interop.Offset(ref v, ref v.position);
 
-            result[2].binding = 0;
-            result[2].location = 2;
-            result[2].format = VkFormat.R32g32Sfloat;
-            result[2].offset = (uint)Interop.Offset(ref v, ref v.texCoord);
+            var desc2 = new VkVertexInputAttributeDescription();
+            desc2.binding = 0;
+            desc2.location = 1;
+            desc2.format = VkFormat.R32g32b32Sfloat;
+            desc2.offset = (uint)Interop.Offset(ref v, ref v.color);
 
-            return result;
+            var desc3 = new VkVertexInputAttributeDescription();
+            desc3.binding = 0;
+            desc3.location = 2;
+            desc3.format = VkFormat.R32g32Sfloat;
+            desc3.offset = (uint)Interop.Offset(ref v, ref v.texCoord);
+
+            return new List<VkVertexInputAttributeDescription> { desc1, desc2, desc3 };
         }
     }
 
@@ -77,12 +79,12 @@ namespace Samples {
             Console.ReadLine();
         }
 
-        string[] layers = {
+        List<string> layers = new List<string> {
             "VK_LAYER_LUNARG_standard_validation",
             //"VK_LAYER_LUNARG_api_dump"
         };
 
-        string[] deviceExtensions = {
+        List<string> deviceExtensions = new List<string> {
             "VK_KHR_swapchain"
         };
 
@@ -208,13 +210,13 @@ namespace Samples {
         }
 
         void MainLoop() {
-            var waitSemaphores = new Semaphore[] { imageAvailableSemaphore };
-            var waitStages = new VkPipelineStageFlags[] { VkPipelineStageFlags.ColorAttachmentOutputBit };
-            var signalSemaphores = new Semaphore[] { renderFinishedSemaphore };
-            var swapchains = new Swapchain[] { swapchain };
+            var waitSemaphores = new List<Semaphore> { imageAvailableSemaphore };
+            var waitStages = new List<VkPipelineStageFlags> { VkPipelineStageFlags.ColorAttachmentOutputBit };
+            var signalSemaphores = new List<Semaphore> { renderFinishedSemaphore };
+            var swapchains = new List<Swapchain> { swapchain };
 
-            var commandBuffer = new CommandBuffer[1];
-            var index = new uint[1];
+            var commandBuffer = new List<CommandBuffer> { null };
+            var index = new List<uint> { 0 };
 
             var submitInfo = new SubmitInfo();
             submitInfo.waitSemaphores = waitSemaphores;
@@ -227,7 +229,7 @@ namespace Samples {
             presentInfo.swapchains = swapchains;
             presentInfo.imageIndices = index;
 
-            var submitInfos = new SubmitInfo[] { submitInfo };
+            var submitInfos = new List<SubmitInfo> { submitInfo };
 
             GLFW.ShowWindow(window);
 
@@ -344,7 +346,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = GLFW_VK.GetRequiredInstanceExceptions();
+            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -389,13 +391,13 @@ namespace Samples {
             var features = physicalDevice.Features;
 
             HashSet<uint> uniqueIndices = new HashSet<uint> { graphicsIndex, presentIndex };
-            float[] priorities = new float[] { 1f };
-            DeviceQueueCreateInfo[] queueInfos = new DeviceQueueCreateInfo[uniqueIndices.Count];
+            List<float> priorities = new List<float> { 1f };
+            List<DeviceQueueCreateInfo> queueInfos = new List<DeviceQueueCreateInfo>(uniqueIndices.Count);
 
             int i = 0;
             foreach (var ind in uniqueIndices) {
                 var queueInfo = new DeviceQueueCreateInfo(ind, 1, priorities);
-                queueInfos[i] = queueInfo;
+                queueInfos.Add(queueInfo);
                 i++;
             }
 
@@ -478,7 +480,7 @@ namespace Samples {
             info.imageArrayLayers = 1;
             info.imageUsage = VkImageUsageFlags.ColorAttachmentBit;
 
-            var queueFamilyIndices = new uint[] { graphicsIndex, presentIndex };
+            var queueFamilyIndices = new List<uint> { graphicsIndex, presentIndex };
 
             if (graphicsIndex != presentIndex) {
                 info.imageSharingMode = VkSharingMode.Concurrent;
@@ -559,7 +561,7 @@ namespace Samples {
 
             var subpass = new SubpassDescription();
             subpass.PipelineBindPoint = VkPipelineBindPoint.Graphics;
-            subpass.ColorAttachments = new VkAttachmentReference[] { colorAttachmentRef };
+            subpass.ColorAttachments = new List<VkAttachmentReference> { colorAttachmentRef };
             subpass.DepthStencilAttachment = depthAttachmentRef;
 
             var dependency = new VkSubpassDependency();
@@ -572,9 +574,9 @@ namespace Samples {
                                     | VkAccessFlags.ColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.attachments = new VkAttachmentDescription[] { colorAttachment, depthAttachment };
-            info.subpasses = new SubpassDescription[] { subpass };
-            info.dependencies = new VkSubpassDependency[] { dependency };
+            info.attachments = new List<VkAttachmentDescription> { colorAttachment, depthAttachment };
+            info.subpasses = new List<SubpassDescription> { subpass };
+            info.dependencies = new List<VkSubpassDependency> { dependency };
 
             renderPass?.Dispose();
             renderPass = new RenderPass(device, info);
@@ -594,7 +596,7 @@ namespace Samples {
             samplerLayoutBinding.stageFlags = VkShaderStageFlags.FragmentBit;
 
             var info = new DescriptorSetLayoutCreateInfo();
-            info.bindings = new VkDescriptorSetLayoutBinding[] { uboLayoutBinding, samplerLayoutBinding };
+            info.bindings = new List<VkDescriptorSetLayoutBinding> { uboLayoutBinding, samplerLayoutBinding };
 
             descriptorSetLayout = new DescriptorSetLayout(device, info);
         }
@@ -618,10 +620,10 @@ namespace Samples {
             fragInfo.module = frag;
             fragInfo.name = "main";
 
-            var shaderStages = new PipelineShaderStageCreateInfo[] { vertInfo, fragInfo };
+            var shaderStages = new List<PipelineShaderStageCreateInfo> { vertInfo, fragInfo };
 
             var vertexInputInfo = new PipelineVertexInputStateCreateInfo();
-            vertexInputInfo.vertexBindingDescriptions = new VkVertexInputBindingDescription[] { Vertex.GetBindingDescription() };
+            vertexInputInfo.vertexBindingDescriptions = new List<VkVertexInputBindingDescription> { Vertex.GetBindingDescription() };
             vertexInputInfo.vertexAttributeDescriptions = Vertex.GetAttributeDescriptions();
 
             var inputAssembly = new PipelineInputAssemblyStateCreateInfo();
@@ -676,7 +678,7 @@ namespace Samples {
             depthStencil.stencilTestEnable = false;
 
             var pipelineLayoutInfo = new PipelineLayoutCreateInfo();
-            pipelineLayoutInfo.setLayouts = new DescriptorSetLayout[] { descriptorSetLayout };
+            pipelineLayoutInfo.setLayouts = new List<DescriptorSetLayout> { descriptorSetLayout };
 
             pipelineLayout?.Dispose();
 
@@ -713,7 +715,7 @@ namespace Samples {
             swapchainFramebuffers = new List<Framebuffer>(swapchainImageViews.Count);
 
             for (int i = 0; i < swapchainImageViews.Count; i++) {
-                var attachments = new ImageView[] { swapchainImageViews[i], depthImageView };
+                var attachments = new List<ImageView> { swapchainImageViews[i], depthImageView };
 
                 var info = new FramebufferCreateInfo();
                 info.renderPass = renderPass;
@@ -896,12 +898,12 @@ namespace Samples {
 
         void EndSingleTimeCommand(CommandBuffer commandBuffer) {
             commandBuffer.End();
-            var commands = new CommandBuffer[] { commandBuffer };
+            var commands = new List<CommandBuffer> { commandBuffer };
 
             var info = new SubmitInfo();
             info.commandBuffers = commands;
 
-            graphicsQueue.Submit(new SubmitInfo[] { info }, null);
+            graphicsQueue.Submit(new List<SubmitInfo> { info }, null);
             graphicsQueue.WaitIdle();
 
             commandPool.Free(commands);
@@ -1081,11 +1083,15 @@ namespace Samples {
         }
 
         void CreateDescriptorPool() {
-            var poolSizes = new VkDescriptorPoolSize[2];
-            poolSizes[0].type = VkDescriptorType.UniformBuffer;
-            poolSizes[0].descriptorCount = 1;
-            poolSizes[1].type = VkDescriptorType.CombinedImageSampler;
-            poolSizes[1].descriptorCount = 1;
+            var size1 = new VkDescriptorPoolSize();
+            size1.type = VkDescriptorType.UniformBuffer;
+            size1.descriptorCount = 1;
+
+            var size2 = new VkDescriptorPoolSize();
+            size2.type = VkDescriptorType.CombinedImageSampler;
+            size2.descriptorCount = 1;
+
+            var poolSizes = new List<VkDescriptorPoolSize> { size1, size2 };
 
             var info = new DescriptorPoolCreateInfo();
             info.poolSizes = poolSizes;
@@ -1095,7 +1101,7 @@ namespace Samples {
         }
 
         void CreateDescriptorSet() {
-            var layouts = new DescriptorSetLayout[] { descriptorSetLayout };
+            var layouts = new List<DescriptorSetLayout> { descriptorSetLayout };
             var info = new DescriptorSetAllocateInfo();
             info.descriptorSetCount = 1;
             info.setLayouts = layouts;
@@ -1155,14 +1161,16 @@ namespace Samples {
                 renderPassInfo.framebuffer = swapchainFramebuffers[i];
                 renderPassInfo.renderArea.extent = swapchainExtent;
 
-                var clearValues = new VkClearValue[2];
-                clearValues[0].color.float32_0 = 0;
-                clearValues[0].color.float32_1 = 0;
-                clearValues[0].color.float32_2 = 0;
-                clearValues[0].color.float32_3 = 1f;
-                clearValues[1].depthStencil.depth = 1;
-                clearValues[1].depthStencil.stencil = 0;
+                var clear1 = new VkClearValue();
+                clear1.color.float32_0 = 0;
+                clear1.color.float32_1 = 0;
+                clear1.color.float32_2 = 0;
+                clear1.color.float32_3 = 1f;
+                var clear2 = new VkClearValue();
+                clear2.depthStencil.depth = 1;
+                clear2.depthStencil.stencil = 0;
 
+                var clearValues = new List<VkClearValue> { clear1, clear2 };
                 renderPassInfo.clearValues = clearValues;
 
                 buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.Inline);

@@ -16,12 +16,12 @@ namespace Samples {
             Console.ReadLine();
         }
 
-        string[] layers = {
+        List<string> layers = new List<string> {
             "VK_LAYER_LUNARG_standard_validation",
             //"VK_LAYER_LUNARG_api_dump"
         };
 
-        string[] deviceExtensions = {
+        List<string> deviceExtensions = new List<string> {
             "VK_KHR_swapchain"
         };
 
@@ -93,13 +93,13 @@ namespace Samples {
         }
 
         void MainLoop() {
-            var waitSemaphores = new Semaphore[] { imageAvailableSemaphore };
-            var waitStages = new VkPipelineStageFlags[] { VkPipelineStageFlags.ColorAttachmentOutputBit };
-            var signalSemaphores = new Semaphore[] { renderFinishedSemaphore };
-            var swapchains = new Swapchain[] { swapchain };
+            var waitSemaphores = new List<Semaphore> { imageAvailableSemaphore };
+            var waitStages = new List<VkPipelineStageFlags> { VkPipelineStageFlags.ColorAttachmentOutputBit };
+            var signalSemaphores = new List<Semaphore> { renderFinishedSemaphore };
+            var swapchains = new List<Swapchain> { swapchain };
 
-            var commandBuffer = new CommandBuffer[1];
-            var index = new uint[1];
+            var commandBuffer = new List<CommandBuffer>() { null };
+            var index = new List<uint>() { 0 };
 
             var submitInfo = new SubmitInfo();
             submitInfo.waitSemaphores = waitSemaphores;
@@ -112,7 +112,7 @@ namespace Samples {
             presentInfo.swapchains = swapchains;
             presentInfo.imageIndices = index;
 
-            var submitInfos = new SubmitInfo[] { submitInfo };
+            var submitInfos = new List<SubmitInfo> { submitInfo };
 
             GLFW.ShowWindow(window);
 
@@ -173,7 +173,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = GLFW_VK.GetRequiredInstanceExceptions();
+            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -218,13 +218,13 @@ namespace Samples {
             var features = physicalDevice.Features;
 
             HashSet<uint> uniqueIndices = new HashSet<uint> { graphicsIndex, presentIndex };
-            float[] priorities = new float[] { 1f };
-            DeviceQueueCreateInfo[] queueInfos = new DeviceQueueCreateInfo[uniqueIndices.Count];
+            List<float> priorities = new List<float> { 1f };
+            List<DeviceQueueCreateInfo> queueInfos = new List<DeviceQueueCreateInfo>(uniqueIndices.Count);
 
             int i = 0;
             foreach (var ind in uniqueIndices) {
                 var queueInfo = new DeviceQueueCreateInfo(ind, 1, priorities);
-                queueInfos[i] = queueInfo;
+                queueInfos.Add(queueInfo);
                 i++;
             }
 
@@ -307,7 +307,7 @@ namespace Samples {
             info.imageArrayLayers = 1;
             info.imageUsage = VkImageUsageFlags.ColorAttachmentBit;
 
-            var queueFamilyIndices = new uint[] { graphicsIndex, presentIndex };
+            var queueFamilyIndices = new List<uint> { graphicsIndex, presentIndex };
 
             if (graphicsIndex != presentIndex) {
                 info.imageSharingMode = VkSharingMode.Concurrent;
@@ -371,7 +371,7 @@ namespace Samples {
 
             var subpass = new SubpassDescription();
             subpass.PipelineBindPoint = VkPipelineBindPoint.Graphics;
-            subpass.ColorAttachments = new VkAttachmentReference[] { colorAttachmentRef };
+            subpass.ColorAttachments = new List<VkAttachmentReference> { colorAttachmentRef };
 
             var dependency = new VkSubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
@@ -383,9 +383,9 @@ namespace Samples {
                                     | VkAccessFlags.ColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.attachments = new VkAttachmentDescription[] { colorAttachment };
-            info.subpasses = new SubpassDescription[] { subpass };
-            info.dependencies = new VkSubpassDependency[] { dependency };
+            info.attachments = new List<VkAttachmentDescription> { colorAttachment };
+            info.subpasses = new List<SubpassDescription> { subpass };
+            info.dependencies = new List<VkSubpassDependency> { dependency };
 
             renderPass?.Dispose();
             renderPass = new RenderPass(device, info);
@@ -410,7 +410,7 @@ namespace Samples {
             fragInfo.module = frag;
             fragInfo.name = "main";
 
-            var shaderStages = new PipelineShaderStageCreateInfo[] { vertInfo, fragInfo };
+            var shaderStages = new List<PipelineShaderStageCreateInfo> { vertInfo, fragInfo };
 
             var vertexInputInfo = new PipelineVertexInputStateCreateInfo();
 
@@ -492,7 +492,7 @@ namespace Samples {
             swapchainFramebuffers = new List<Framebuffer>(swapchainImageViews.Count);
 
             for (int i = 0; i < swapchainImageViews.Count; i++) {
-                var attachments = new ImageView[] { swapchainImageViews[i] };
+                var attachments = new List<ImageView> { swapchainImageViews[i] };
 
                 var info = new FramebufferCreateInfo();
                 info.renderPass = renderPass;
@@ -541,7 +541,7 @@ namespace Samples {
                 clearColor.color.float32_2 = 0;
                 clearColor.color.float32_3 = 1f;
 
-                renderPassInfo.clearValues = new VkClearValue[] { clearColor };
+                renderPassInfo.clearValues = new List<VkClearValue> { clearColor };
 
                 buffer.BeginRenderPass(renderPassInfo, VkSubpassContents.Inline);
                 buffer.BindPipeline(VkPipelineBindPoint.Graphics, pipeline);
