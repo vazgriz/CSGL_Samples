@@ -56,12 +56,12 @@ namespace Samples {
             GLFW.Init();
         }
 
-        string[] layers = {
+        List<string> layers = new List<string> {
             "VK_LAYER_LUNARG_standard_validation",
             //"VK_LAYER_LUNARG_api_dump"
         };
 
-        string[] deviceExtensions = {
+        List<string> deviceExtensions = new List<string> {
             "VK_KHR_swapchain"
         };
 
@@ -255,7 +255,7 @@ namespace Samples {
 
             var layersMarshalled = new NativeStringArray(layers);
             info.ppEnabledLayerNames = layersMarshalled.Address;
-            info.enabledLayerCount = (uint)layers.Length;
+            info.enabledLayerCount = (uint)layers.Count;
 
             var result = VK.CreateInstance(ref info, alloc, out instance);
 
@@ -337,7 +337,7 @@ namespace Samples {
 
             var extensionsMarshalled = new NativeStringArray(deviceExtensions);
             info.ppEnabledExtensionNames = extensionsMarshalled.Address;
-            info.enabledExtensionCount = (uint)deviceExtensions.Length;
+            info.enabledExtensionCount = (uint)deviceExtensions.Count;
 
             var result = VK.CreateDevice(physicalDevice, ref info, alloc, out device);
 
