@@ -8,6 +8,7 @@ using CSGL;
 using CSGL.STB;
 using CSGL.GLFW;
 using CSGL.Vulkan;
+using CSGL.GLFW.Unmanaged;
 
 using Buffer = CSGL.Vulkan.Buffer;
 using Image = CSGL.Vulkan.Image;
@@ -285,7 +286,7 @@ namespace Samples {
 
             ulong size = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var data = uniformStagingBufferMemory.Map(0, size, VkMemoryMapFlags.None);
+            var data = uniformStagingBufferMemory.Map(0, size);
             Interop.Copy(new UniformBufferObject[] { ubo }, data);
             uniformStagingBufferMemory.Unmap();
 
@@ -314,7 +315,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
+            var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -713,7 +714,7 @@ namespace Samples {
                 | VkMemoryPropertyFlags.HostVisibleBit,
                 out stagingImage, out stagingImageMemory);
 
-            var data = stagingImageMemory.Map(0, imageSize, VkMemoryMapFlags.None);
+            var data = stagingImageMemory.Map(0, imageSize);
             Interop.Copy(pixels, data, (int)imageSize);
             stagingImageMemory.Unmap();
 
@@ -862,7 +863,7 @@ namespace Samples {
             region.extent.height = height;
             region.extent.depth = 1;
 
-            commandBuffer.Copy(srcImage, VkImageLayout.TransferSrcOptimal,
+            commandBuffer.CopyImage(srcImage, VkImageLayout.TransferSrcOptimal,
                 dstImage, VkImageLayout.TransferDstOptimal,
                 new VkImageCopy[] { region });
 
@@ -880,7 +881,7 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize);
             Interop.Copy(vertices, data);
             stagingBufferMemory.Unmap();
 
@@ -908,7 +909,7 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize);
             Interop.Copy(indices, data);
             stagingBufferMemory.Unmap();
 
@@ -951,7 +952,7 @@ namespace Samples {
             region.dstOffset = 0;
             region.size = size;
 
-            buffer.Copy(src, dst, new VkBufferCopy[] { region });
+            buffer.CopyBuffer(src, dst, new VkBufferCopy[] { region });
 
             EndSingleTimeCommand(buffer);
         }
@@ -1004,24 +1005,22 @@ namespace Samples {
             imageInfo.imageView = textureImageView;
             imageInfo.sampler = textureSampler;
 
-            var descriptorWrites = new WriteDescriptorSet[2];
-            descriptorWrites[0] = new WriteDescriptorSet();
+            var descriptorWrites = new List<WriteDescriptorSet>();
+            descriptorWrites.Add(new WriteDescriptorSet());
             descriptorWrites[0].dstSet = descriptorSet;
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VkDescriptorType.UniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].bufferInfo = bufferInfo;
+            descriptorWrites[0].bufferInfo = new List<DescriptorBufferInfo> { bufferInfo };
 
-            descriptorWrites[1] = new WriteDescriptorSet();
+            descriptorWrites.Add(new WriteDescriptorSet());
             descriptorWrites[1].dstSet = descriptorSet;
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VkDescriptorType.CombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].imageInfo = imageInfo;
+            descriptorWrites[1].imageInfo = new List<DescriptorImageInfo> { imageInfo };
 
-            descriptorPool.Update(descriptorWrites);
+            descriptorSet.Update(descriptorWrites);
         }
 
         void CreateCommandBuffers() {

@@ -5,6 +5,7 @@ using System.Numerics;
 
 using CSGL;
 using CSGL.GLFW;
+using CSGL.GLFW.Unmanaged;
 using CSGL.Vulkan;
 
 using Image = CSGL.Vulkan.Image;
@@ -222,7 +223,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
+            var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -590,7 +591,7 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize);
             Interop.Copy(vertices, data);
             stagingBufferMemory.Unmap();
 
@@ -625,7 +626,7 @@ namespace Samples {
             region.dstOffset = 0;
             region.size = size;
 
-            buffer.Copy(src, dst, new VkBufferCopy[] { region });
+            buffer.CopyBuffer(src, dst, new VkBufferCopy[] { region });
             buffer.End();
 
             var submitInfo = new SubmitInfo();

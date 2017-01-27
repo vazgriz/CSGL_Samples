@@ -7,6 +7,7 @@ using System.Diagnostics;
 using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
+using CSGL.GLFW.Unmanaged;
 
 using Image = CSGL.Vulkan.Image;
 using Buffer = CSGL.Vulkan.Buffer;
@@ -262,7 +263,7 @@ namespace Samples {
 
             ulong size = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var data = uniformStagingBufferMemory.Map(0, size, VkMemoryMapFlags.None);
+            var data = uniformStagingBufferMemory.Map(0, size);
             Interop.Copy(new UniformBufferObject[] { ubo }, data);
             uniformStagingBufferMemory.Unmap();
 
@@ -291,7 +292,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
+            var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),
@@ -673,7 +674,7 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize);
             Interop.Copy(vertices, data);
             stagingBufferMemory.Unmap();
 
@@ -701,7 +702,7 @@ namespace Samples {
                 out stagingBuffer,
                 out stagingBufferMemory);
 
-            var data = stagingBufferMemory.Map(0, bufferSize, VkMemoryMapFlags.None);
+            var data = stagingBufferMemory.Map(0, bufferSize);
             Interop.Copy(indices, data);
             stagingBufferMemory.Unmap();
 
@@ -754,7 +755,7 @@ namespace Samples {
             region.dstOffset = 0;
             region.size = size;
 
-            buffer.Copy(src, dst, new VkBufferCopy[] { region });
+            buffer.CopyBuffer(src, dst, new VkBufferCopy[] { region });
             buffer.End();
 
             var submitInfo = new SubmitInfo();
@@ -803,15 +804,15 @@ namespace Samples {
             bufferInfo.offset = 0;
             bufferInfo.range = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var descriptorWrite = new WriteDescriptorSet();
-            descriptorWrite.dstSet = descriptorSet;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VkDescriptorType.UniformBuffer;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.bufferInfo = bufferInfo;
+            var descriptorWrites = new List<WriteDescriptorSet>();
+            descriptorWrites.Add(new WriteDescriptorSet());
+            descriptorWrites[0].dstSet = descriptorSet;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VkDescriptorType.UniformBuffer;
+            descriptorWrites[0].bufferInfo = new List<DescriptorBufferInfo> { bufferInfo };
 
-            descriptorPool.Update(new WriteDescriptorSet[] { descriptorWrite });
+            descriptorSet.Update(descriptorWrites);
         }
 
         void CreateCommandBuffers() {

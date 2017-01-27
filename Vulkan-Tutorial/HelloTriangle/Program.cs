@@ -4,6 +4,7 @@ using System.IO;
 
 using CSGL.GLFW;
 using CSGL.Vulkan;
+using CSGL.GLFW.Unmanaged;
 
 using Image = CSGL.Vulkan.Image;
 
@@ -173,7 +174,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var extensions = new List<string>(GLFW_VK.GetRequiredInstanceExceptions());
+            var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
 
             var appInfo = new ApplicationInfo(
                 new VkVersion(1, 0, 0),

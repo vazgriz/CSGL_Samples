@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using CSGL;
 using CSGL.GLFW;
 using CSGL.Vulkan;
+using CSGL.GLFW.Unmanaged;
 using CSGL.Vulkan.Unmanaged;
 using System.Runtime.InteropServices;
 
@@ -201,7 +202,7 @@ namespace Samples {
             info.sType = VkStructureType.InstanceCreateInfo;
             info.pApplicationInfo = appInfoMarshalled.Address;
 
-            var extensions = GLFW_VK.GetRequiredInstanceExceptions();
+            var extensions = GLFW.GetRequiredInstanceExceptions();
             var extensionsMarshalled = new NativeStringArray(extensions);
             info.ppEnabledExtensionNames = extensionsMarshalled.Address;
             info.enabledExtensionCount = (uint)extensions.Length;
@@ -219,7 +220,7 @@ namespace Samples {
         }
 
         void CreateSurface() {
-            var result = GLFW_VK.CreateWindowSurface(instance, window, alloc, out surface);
+            var result = GLFW.CreateWindowSurface(instance.native, window, alloc, out surface.native);
 
         }
 
