@@ -936,7 +936,7 @@ namespace Samples {
 
             commandBuffer.PipelineBarrier(VkPipelineStageFlags.TopOfPipeBit, VkPipelineStageFlags.TopOfPipeBit,
                 VkDependencyFlags.None,
-                null, null, new ImageMemoryBarrier[] { barrier });
+                null, null, new List<ImageMemoryBarrier> { barrier });
 
             EndSingleTimeCommand(commandBuffer);
         }
