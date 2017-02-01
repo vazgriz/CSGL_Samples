@@ -534,18 +534,18 @@ namespace Samples {
             depthAttachment.initialLayout = VkImageLayout.DepthStencilAttachmentOptimal;
             depthAttachment.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
 
-            var colorAttachmentRef = new VkAttachmentReference();
+            var colorAttachmentRef = new AttachmentReference();
             colorAttachmentRef.attachment = 0;
             colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
 
-            var depthAttachmentRef = new VkAttachmentReference();
+            var depthAttachmentRef = new AttachmentReference();
             depthAttachmentRef.attachment = 1;
             depthAttachmentRef.layout = VkImageLayout.DepthStencilAttachmentOptimal;
 
             var subpass = new SubpassDescription();
-            subpass.PipelineBindPoint = VkPipelineBindPoint.Graphics;
-            subpass.ColorAttachments = new List<VkAttachmentReference> { colorAttachmentRef };
-            subpass.DepthStencilAttachment = depthAttachmentRef;
+            subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
+            subpass.colorAttachments = new List<AttachmentReference> { colorAttachmentRef };
+            subpass.depthStencilAttachment = depthAttachmentRef;
 
             var dependency = new VkSubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
