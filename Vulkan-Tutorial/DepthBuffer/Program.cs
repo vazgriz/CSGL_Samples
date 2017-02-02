@@ -514,7 +514,7 @@ namespace Samples {
         }
 
         void CreateRenderPass() {
-            var colorAttachment = new VkAttachmentDescription();
+            var colorAttachment = new AttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
             colorAttachment.samples = VkSampleCountFlags._1Bit;
             colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
@@ -524,7 +524,7 @@ namespace Samples {
             colorAttachment.initialLayout = VkImageLayout.Undefined;
             colorAttachment.finalLayout = VkImageLayout.PresentSrcKhr;
 
-            var depthAttachment = new VkAttachmentDescription();
+            var depthAttachment = new AttachmentDescription();
             depthAttachment.format = FindDepthFormat();
             depthAttachment.samples = VkSampleCountFlags._1Bit;
             depthAttachment.loadOp = VkAttachmentLoadOp.Clear;
@@ -547,7 +547,7 @@ namespace Samples {
             subpass.colorAttachments = new List<AttachmentReference> { colorAttachmentRef };
             subpass.depthStencilAttachment = depthAttachmentRef;
 
-            var dependency = new VkSubpassDependency();
+            var dependency = new SubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
             dependency.dstSubpass = 0;
             dependency.srcStageMask = VkPipelineStageFlags.BottomOfPipeBit;
@@ -557,9 +557,9 @@ namespace Samples {
                                     | VkAccessFlags.ColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.attachments = new List<VkAttachmentDescription> { colorAttachment, depthAttachment };
+            info.attachments = new List<AttachmentDescription> { colorAttachment, depthAttachment };
             info.subpasses = new List<SubpassDescription> { subpass };
-            info.dependencies = new List<VkSubpassDependency> { dependency };
+            info.dependencies = new List<SubpassDependency> { dependency };
 
             renderPass?.Dispose();
             renderPass = new RenderPass(device, info);

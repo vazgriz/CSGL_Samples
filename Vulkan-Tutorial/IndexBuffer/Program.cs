@@ -415,7 +415,7 @@ namespace Samples {
         }
 
         void CreateRenderPass() {
-            var colorAttachment = new VkAttachmentDescription();
+            var colorAttachment = new AttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
             colorAttachment.samples = VkSampleCountFlags._1Bit;
             colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
@@ -433,7 +433,7 @@ namespace Samples {
             subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
             subpass.colorAttachments = new List<AttachmentReference> { colorAttachmentRef };
 
-            var dependency = new VkSubpassDependency();
+            var dependency = new SubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
             dependency.dstSubpass = 0;
             dependency.srcStageMask = VkPipelineStageFlags.BottomOfPipeBit;
@@ -443,9 +443,9 @@ namespace Samples {
                                     | VkAccessFlags.ColorAttachmentWriteBit;
 
             var info = new RenderPassCreateInfo();
-            info.attachments = new List<VkAttachmentDescription> { colorAttachment };
+            info.attachments = new List<AttachmentDescription> { colorAttachment };
             info.subpasses = new List<SubpassDescription > { subpass };
-            info.dependencies = new List<VkSubpassDependency> { dependency };
+            info.dependencies = new List<SubpassDependency> { dependency };
 
             renderPass?.Dispose();
             renderPass = new RenderPass(device, info);
