@@ -622,8 +622,8 @@ namespace Samples {
             scissor.extent = swapchainExtent;
 
             var viewportState = new PipelineViewportStateCreateInfo();
-            viewportState.viewports = new VkViewport[] { viewport };
-            viewportState.scissors = new VkRect2D[] { scissor };
+            viewportState.viewports = new List<VkViewport> { viewport };
+            viewportState.scissors = new List<VkRect2D> { scissor };
 
             var rasterizer = new PipelineRasterizationStateCreateInfo();
             rasterizer.polygonMode = VkPolygonMode.Fill;
@@ -649,7 +649,7 @@ namespace Samples {
 
             var colorBlending = new PipelineColorBlendStateCreateInfo();
             colorBlending.logicOp = VkLogicOp.Copy;
-            colorBlending.attachments = new PipelineColorBlendAttachmentState[] { colorBlendAttachment };
+            colorBlending.attachments = new List<PipelineColorBlendAttachmentState> { colorBlendAttachment };
 
             var depthStencil = new PipelineDepthStencilStateCreateInfo();
             depthStencil.depthTestEnable = true;
