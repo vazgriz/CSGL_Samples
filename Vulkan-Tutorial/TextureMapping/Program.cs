@@ -777,7 +777,7 @@ namespace Samples {
 
             image = new Image(device, info);
 
-            var req = image.MemoryRequirements;
+            var req = image.Requirements;
 
             var allocInfo = new MemoryAllocateInfo();
             allocInfo.allocationSize = req.size;
