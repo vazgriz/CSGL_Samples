@@ -640,12 +640,12 @@ namespace Samples {
             info.layout = pipelineLayout;
             info.renderPass = renderPass;
             info.subpass = 0;
-            info.basePipeline = null;
+            info.basePipelineHandle = null;
             info.basePipelineIndex = -1;
 
             pipeline?.Dispose();
 
-            pipeline = new Pipeline(device, info, null);
+            pipeline = new GraphicsPipeline(device, info, null);
 
             vert.Dispose();
             frag.Dispose();
