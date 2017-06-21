@@ -6,11 +6,11 @@ using System.Diagnostics;
 
 using CSGL;
 using CSGL.GLFW;
-using CSGL.Vulkan;
+using CSGL.Vulkan1;
 using CSGL.GLFW.Unmanaged;
 
-using Image = CSGL.Vulkan.Image;
-using Buffer = CSGL.Vulkan.Buffer;
+using Image = CSGL.Vulkan1.Image;
+using Buffer = CSGL.Vulkan1.Buffer;
 
 namespace Samples {
     public struct Vertex {
@@ -106,7 +106,7 @@ namespace Samples {
         PhysicalDevice physicalDevice;
         Device device;
         Swapchain swapchain;
-        List<CSGL.Vulkan.Image> swapchainImages;
+        List<Image> swapchainImages;
         List<ImageView> swapchainImageViews;
         RenderPass renderPass;
         DescriptorSetLayout descriptorSetLayout;

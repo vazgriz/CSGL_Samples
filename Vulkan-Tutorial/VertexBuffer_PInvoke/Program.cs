@@ -5,9 +5,9 @@ using System.Numerics;
 
 using CSGL;
 using CSGL.GLFW;
-using CSGL.Vulkan;
+using CSGL.Vulkan1;
 using CSGL.GLFW.Unmanaged;
-using CSGL.Vulkan.Unmanaged;
+using CSGL.Vulkan1.Unmanaged;
 
 namespace Samples {
     public struct Vertex {

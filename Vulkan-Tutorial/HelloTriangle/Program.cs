@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 
 using CSGL.GLFW;
-using CSGL.Vulkan;
+using CSGL.Vulkan1;
 using CSGL.GLFW.Unmanaged;
 
-using Image = CSGL.Vulkan.Image;
+using Image = CSGL.Vulkan1.Image;
 
 namespace Samples {
     class Program : IDisposable {
@@ -43,7 +43,7 @@ namespace Samples {
         PhysicalDevice physicalDevice;
         Device device;
         Swapchain swapchain;
-        List<CSGL.Vulkan.Image> swapchainImages;
+        List<Image> swapchainImages;
         List<ImageView> swapchainImageViews;
         RenderPass renderPass;
         PipelineLayout pipelineLayout;

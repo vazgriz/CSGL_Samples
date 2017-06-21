@@ -8,11 +8,11 @@ using System.Drawing;
 using CSGL;
 using CSGL.STB;
 using CSGL.GLFW;
-using CSGL.Vulkan;
+using CSGL.Vulkan1;
 using CSGL.GLFW.Unmanaged;
 
-using Buffer = CSGL.Vulkan.Buffer;
-using Image = CSGL.Vulkan.Image;
+using Buffer = CSGL.Vulkan1.Buffer;
+using Image = CSGL.Vulkan1.Image;
 
 namespace Samples {
     public struct Vertex {

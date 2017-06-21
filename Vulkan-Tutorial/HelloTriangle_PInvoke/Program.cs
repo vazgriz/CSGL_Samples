@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 using CSGL;
 using CSGL.GLFW;
-using CSGL.Vulkan;
+using CSGL.Vulkan1;
 using CSGL.GLFW.Unmanaged;
-using CSGL.Vulkan.Unmanaged;
+using CSGL.Vulkan1.Unmanaged;
 using System.Runtime.InteropServices;
 
 namespace Samples {
