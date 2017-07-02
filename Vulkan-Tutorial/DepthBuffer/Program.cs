@@ -784,38 +784,33 @@ namespace Samples {
 
             ulong imageSize = (ulong)(width * height * 4);
 
-            Image stagingImage;
-            DeviceMemory stagingImageMemory;
+            Buffer stagingBuffer;
+            DeviceMemory stagingBufferMemory;
 
-            CreateImage((uint)width, (uint)height,
-                VkFormat.R8g8b8a8Unorm, VkImageTiling.Linear,
-                VkImageUsageFlags.TransferSrcBit,
-                VkMemoryPropertyFlags.HostCoherentBit
-                | VkMemoryPropertyFlags.HostVisibleBit,
-                out stagingImage, out stagingImageMemory);
+            CreateBuffer(imageSize, VkBufferUsageFlags.TransferSrcBit,
+                VkMemoryPropertyFlags.HostVisibleBit | VkMemoryPropertyFlags.HostCoherentBit,
+                out stagingBuffer, out stagingBufferMemory);
 
-            var data = stagingImageMemory.Map(0, imageSize);
+            var data = stagingBufferMemory.Map(0, imageSize);
             Interop.Copy(pixels, data, (int)imageSize);
-            stagingImageMemory.Unmap();
+            stagingBufferMemory.Unmap();
 
             CreateImage((uint)width, (uint)height,
                 VkFormat.R8g8b8a8Unorm,
-                VkImageTiling.Linear,
+                VkImageTiling.Optimal,
                 VkImageUsageFlags.TransferDstBit | VkImageUsageFlags.SampledBit,
                 VkMemoryPropertyFlags.DeviceLocalBit,
                 out textureImage, out textureImageMemory);
 
-            TransitionImageLayout(stagingImage, VkFormat.R8g8b8a8Unorm,
-                VkImageLayout.Preinitialized, VkImageLayout.TransferSrcOptimal);
             TransitionImageLayout(textureImage, VkFormat.R8g8b8a8Unorm,
                 VkImageLayout.Preinitialized, VkImageLayout.TransferDstOptimal);
-            CopyImage(stagingImage, textureImage, (uint)width, (uint)height);
+            CopyBufferToImage(stagingBuffer, textureImage, (uint)width, (uint)height);
 
             TransitionImageLayout(textureImage, VkFormat.R8g8b8a8Unorm,
                 VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal);
 
-            stagingImage.Dispose();
-            stagingImageMemory.Dispose();
+            stagingBuffer.Dispose();
+            stagingBufferMemory.Dispose();
         }
 
         void CreateTextureImageView() {
@@ -941,27 +936,27 @@ namespace Samples {
             EndSingleTimeCommand(commandBuffer);
         }
 
-        void CopyImage(Image srcImage, Image dstImage, uint width, uint height) {
-            var commandBuffer = BeginSingleTimeCommands();
+        void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height) {
+            CommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-            var subresource = new VkImageSubresourceLayers();
-            subresource.aspectMask = VkImageAspectFlags.ColorBit;
-            subresource.baseArrayLayer = 0;
-            subresource.mipLevel = 0;
-            subresource.layerCount = 1;
+            VkBufferImageCopy region = new VkBufferImageCopy();
+            region.bufferOffset = 0;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
 
-            var region = new VkImageCopy();
-            region.srcSubresource = subresource;
-            region.dstSubresource = subresource;
-            region.srcOffset = new VkOffset3D();
-            region.dstOffset = new VkOffset3D();
-            region.extent.width = width;
-            region.extent.height = height;
-            region.extent.depth = 1;
+            region.imageSubresource.aspectMask = VkImageAspectFlags.ColorBit;
+            region.imageSubresource.mipLevel = 0;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
 
-            commandBuffer.CopyImage(srcImage, VkImageLayout.TransferSrcOptimal,
-                dstImage, VkImageLayout.TransferDstOptimal,
-                new VkImageCopy[] { region });
+            region.imageOffset = new VkOffset3D();
+            region.imageExtent = new VkExtent3D {
+                width = width,
+                height = height,
+                depth = 1
+            };
+
+            commandBuffer.CopyBufferToImage(buffer, image, VkImageLayout.TransferDstOptimal, new VkBufferImageCopy[] { region });
 
             EndSingleTimeCommand(commandBuffer);
         }
