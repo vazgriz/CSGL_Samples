@@ -149,7 +149,6 @@ namespace AllColors {
         List<CommandBuffer> commandBuffers;
         Semaphore imageAvailableSemaphore;
         Semaphore renderFinishedSemaphore;
-        Fence renderFence;
 
         void Run() {
             colorSource = new ColorSource(bitDepth, 0);
@@ -208,8 +207,6 @@ namespace AllColors {
 
             while (!window.ShouldClose) {
                 GLFW.PollEvents();
-                renderFence.Wait();
-                renderFence.Reset();
 
                 UpdateUniformBuffer();
 
@@ -227,7 +224,7 @@ namespace AllColors {
                 swapchains[0] = swapchain;
                 index[0] = imageIndex;
 
-                graphicsQueue.Submit(submitInfos, renderFence);
+                graphicsQueue.Submit(submitInfos, null);
                 result = presentQueue.Present(presentInfo);
             }
 
@@ -258,7 +255,6 @@ namespace AllColors {
             generator.Dispose();
             imageAvailableSemaphore.Dispose();
             renderFinishedSemaphore.Dispose();
-            renderFence.Dispose();
             descriptorPool.Dispose();
             uniformBuffer.Dispose();
             uniformBufferMemory.Dispose();
@@ -1079,10 +1075,6 @@ namespace AllColors {
         void CreateSyncObjects() {
             imageAvailableSemaphore = new Semaphore(device);
             renderFinishedSemaphore = new Semaphore(device);
-
-            FenceCreateInfo info = new FenceCreateInfo();
-            info.Flags = VkFenceCreateFlags.SignaledBit;
-            renderFence = new Fence(device, info);
         }
     }
 
