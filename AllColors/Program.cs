@@ -971,6 +971,7 @@ namespace AllColors {
                 CommandBuffer commandBuffer = commandBuffers[i];
                 commandBuffer.Reset(VkCommandBufferResetFlags.None);
                 CommandBufferBeginInfo beginInfo = new CommandBufferBeginInfo();
+                beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUseBit;
                 commandBuffer.Begin(beginInfo);
 
                 //transfer to writable
