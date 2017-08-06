@@ -8,17 +8,16 @@ namespace AllColors {
         Queue<Color4b> queue;
         int bitDepth;
 
-        public ColorSource(int bitDepth, int seed) {
-            if (bitDepth < 1 || bitDepth > 8) throw new ArgumentOutOfRangeException("bitDepth must be in the range [1, 8]");
-            this.bitDepth = bitDepth;
-
-            var list = GenColors();
+        public ColorSource(int width, int height, int seed) {            
+            var list = GenColors(width, height);
             var rand = new Random(seed);
             Shuffle(list, rand);
             queue = new Queue<Color4b>(list);
         }
 
-        List<Color4b> GenColors() {
+        List<Color4b> GenColors(int width, int height) {
+            int total = width * height;
+            bitDepth = GetBitDepth(total);
             List<Color4b> list = new List<Color4b>();
             int max = (int)Math.Pow(2, bitDepth);
             for (int r = 0; r < max; r++) {
@@ -30,6 +29,16 @@ namespace AllColors {
             }
 
             return list;
+        }
+
+        int GetBitDepth(int total) {
+            int bitDepth = 1;
+
+            while ((int)Math.Pow(2, 3 * bitDepth) < total) {
+                bitDepth++;
+            }
+
+            return bitDepth;
         }
 
         int Map(int num) {

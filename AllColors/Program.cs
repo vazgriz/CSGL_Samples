@@ -81,7 +81,6 @@ namespace AllColors {
 
         const int imageWidth = 2048;
         const int imageHeight = 1024;
-        const int bitDepth = 7;
 
         List<string> layers = new List<string> {
             "VK_LAYER_LUNARG_standard_validation",
@@ -151,7 +150,7 @@ namespace AllColors {
         Semaphore renderFinishedSemaphore;
 
         void Run() {
-            colorSource = new ColorSource(bitDepth, 0);
+            colorSource = new ColorSource(imageWidth, imageHeight, 0);
             generator = new Generator(imageWidth, imageHeight, colorSource);
             CreateWindow();
             CreateInstance();
