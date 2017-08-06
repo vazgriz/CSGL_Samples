@@ -719,7 +719,7 @@ namespace AllColors {
             info.arrayLayers = 1;
             info.format = format;
             info.tiling = tiling;
-            info.initialLayout = VkImageLayout.Preinitialized;
+            info.initialLayout = VkImageLayout.Undefined;
             info.usage = usage;
             info.sharingMode = VkSharingMode.Exclusive;
             info.samples = VkSampleCountFlags._1Bit;
@@ -776,10 +776,10 @@ namespace AllColors {
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount = 1;
 
-            if (oldLayout == VkImageLayout.Preinitialized && newLayout == VkImageLayout.TransferSrcOptimal) {
+            if (oldLayout == VkImageLayout.Undefined && newLayout == VkImageLayout.TransferSrcOptimal) {
                 barrier.srcAccessMask = VkAccessFlags.HostWriteBit;
                 barrier.dstAccessMask = VkAccessFlags.TransferReadBit;
-            } else if (oldLayout == VkImageLayout.Preinitialized && newLayout == VkImageLayout.TransferDstOptimal) {
+            } else if (oldLayout == VkImageLayout.Undefined && newLayout == VkImageLayout.TransferDstOptimal) {
                 barrier.srcAccessMask = VkAccessFlags.HostWriteBit;
                 barrier.dstAccessMask = VkAccessFlags.TransferWriteBit;
             } else if (oldLayout == VkImageLayout.TransferDstOptimal && newLayout == VkImageLayout.ShaderReadOnlyOptimal) {
@@ -803,7 +803,7 @@ namespace AllColors {
                 out textureImage, out textureImageMemory);
 
             TransitionImageLayout(textureImage, VkFormat.R8g8b8a8Unorm,
-                VkImageLayout.Preinitialized, VkImageLayout.ShaderReadOnlyOptimal);
+                VkImageLayout.Undefined, VkImageLayout.ShaderReadOnlyOptimal);
         }
 
         void CreateTextureImageView() {
