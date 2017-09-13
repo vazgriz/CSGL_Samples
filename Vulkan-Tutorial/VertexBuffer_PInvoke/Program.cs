@@ -223,7 +223,7 @@ namespace Samples {
 
         void CreateWindow() {
             GLFW.WindowHint(WindowHint.ClientAPI, (int)ClientAPI.NoAPI);
-            window = GLFW.CreateWindow(height, width, "Vulkan Test", MonitorPtr.Null, WindowPtr.Null);
+            window = GLFW.CreateWindow(height, width, "Vertex Buffer", MonitorPtr.Null, WindowPtr.Null);
 
             GLFW.SetWindowSizeCallback(window, OnWindowResized);
         }
@@ -234,7 +234,7 @@ namespace Samples {
         }
 
         void CreateInstance() {
-            var appName = new InteropString("Hello Triangle");
+            var appName = new InteropString("Vertex Buffer");
 
             var appInfo = new VkApplicationInfo();
             appInfo.sType = VkStructureType.ApplicationInfo;

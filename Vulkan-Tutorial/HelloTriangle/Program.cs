@@ -170,7 +170,7 @@ namespace Samples {
         void CreateWindow() {
             GLFW.WindowHint(WindowHint.ClientAPI, (int)ClientAPI.NoAPI);
             GLFW.WindowHint(WindowHint.Visible, 0);
-            window = GLFW.CreateWindow(width, height, "Vulkan Test", MonitorPtr.Null, WindowPtr.Null);
+            window = GLFW.CreateWindow(width, height, "Hello Triangle", MonitorPtr.Null, WindowPtr.Null);
         }
 
         void CreateInstance() {
@@ -180,7 +180,7 @@ namespace Samples {
                 apiVersion = new VkVersion(1, 0, 0),
                 applicationVersion = new VkVersion(1, 0, 0),
                 engineVersion = new VkVersion(1, 0, 0),
-                applicationName = "All Colors",
+                applicationName = "Hello Triangle"
             };
 
             var info = new InstanceCreateInfo {

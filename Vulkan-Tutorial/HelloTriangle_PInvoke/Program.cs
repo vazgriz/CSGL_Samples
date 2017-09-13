@@ -176,7 +176,7 @@ namespace Samples {
 
         void CreateWindow() {
             GLFW.WindowHint(WindowHint.ClientAPI, (int)ClientAPI.NoAPI);
-            window = GLFW.CreateWindow(height, width, "Vulkan Test", MonitorPtr.Null, WindowPtr.Null);
+            window = GLFW.CreateWindow(height, width, "Hello Triangle", MonitorPtr.Null, WindowPtr.Null);
 
             GLFW.SetWindowSizeCallback(window, OnWindowResized);
         }

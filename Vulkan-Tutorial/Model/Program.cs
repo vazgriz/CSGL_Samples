@@ -314,7 +314,7 @@ namespace Samples {
         void CreateWindow() {
             GLFW.WindowHint(WindowHint.ClientAPI, (int)ClientAPI.NoAPI);
             GLFW.WindowHint(WindowHint.Visible, 0);
-            window = GLFW.CreateWindow(width, height, "Vulkan Test", MonitorPtr.Null, WindowPtr.Null);
+            window = GLFW.CreateWindow(width, height, "Model", MonitorPtr.Null, WindowPtr.Null);
         }
 
         void LoadModel() {
@@ -353,7 +353,7 @@ namespace Samples {
                 apiVersion = new VkVersion(1, 0, 0),
                 applicationVersion = new VkVersion(1, 0, 0),
                 engineVersion = new VkVersion(1, 0, 0),
-                applicationName = "All Colors",
+                applicationName = "Model",
             };
 
             var info = new InstanceCreateInfo {
