@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 
 using CSGL.GLFW;
-using CSGL.Vulkan1;
+using CSGL.Vulkan;
 using CSGL.GLFW.Unmanaged;
 
-using Image = CSGL.Vulkan1.Image;
+using Image = CSGL.Vulkan.Image;
 
 namespace Samples {
     class Program : IDisposable {
@@ -60,8 +60,8 @@ namespace Samples {
             GLFW.Init();
             CreateWindow();
             CreateInstance();
-            PickPhysicalDevice();
             CreateSurface();
+            PickPhysicalDevice();
             PickQueues();
             CreateDevice();
             CreateSwapchain();
@@ -130,7 +130,7 @@ namespace Samples {
                 }
 
                 uint imageIndex;
-                var result = swapchain.AcquireNextImage(ulong.MaxValue, imageAvailableSemaphore, out imageIndex);
+                var result = swapchain.AcquireNextImage(ulong.MaxValue, imageAvailableSemaphore, null, out imageIndex);
 
                 if (result == VkResult.ErrorOutOfDateKhr || result == VkResult.SuboptimalKhr) {
                     RecreateSwapchain();
@@ -176,15 +176,18 @@ namespace Samples {
         void CreateInstance() {
             var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
 
-            var appInfo = new ApplicationInfo(
-                new VkVersion(1, 0, 0),
-                new VkVersion(1, 0, 0),
-                new VkVersion(1, 0, 0),
-                "Vulkan Test",
-                null
-            );
+            var appInfo = new ApplicationInfo {
+                apiVersion = new VkVersion(1, 0, 0),
+                applicationVersion = new VkVersion(1, 0, 0),
+                engineVersion = new VkVersion(1, 0, 0),
+                applicationName = "All Colors",
+            };
 
-            var info = new InstanceCreateInfo(appInfo, extensions, layers);
+            var info = new InstanceCreateInfo {
+                applicationInfo = appInfo,
+                extensions = extensions,
+                layers = layers
+            };
             instance = new Instance(info);
         }
 
@@ -193,7 +196,7 @@ namespace Samples {
         }
 
         void CreateSurface() {
-            surface = new Surface(physicalDevice, window);
+            surface = new Surface(instance, window);
         }
 
         void PickQueues() {
@@ -224,12 +227,21 @@ namespace Samples {
 
             int i = 0;
             foreach (var ind in uniqueIndices) {
-                var queueInfo = new DeviceQueueCreateInfo(ind, 1, priorities);
+                var queueInfo = new DeviceQueueCreateInfo {
+                    queueFamilyIndex = ind,
+                    queueCount = 1,
+                    priorities = priorities
+                };
+
                 queueInfos.Add(queueInfo);
                 i++;
             }
 
-            var info = new DeviceCreateInfo(deviceExtensions, queueInfos, features);
+            var info = new DeviceCreateInfo {
+                extensions = deviceExtensions,
+                queueCreateInfos = queueInfos,
+                features = features
+            };
             device = new Device(physicalDevice, info);
 
             graphicsQueue = device.GetQueue(graphicsIndex, 0);
@@ -237,9 +249,9 @@ namespace Samples {
         }
 
         SwapchainSupport GetSwapchainSupport(PhysicalDevice physicalDevice) {
-            var cap = surface.Capabilities;
-            var formats = surface.Formats;
-            var modes = surface.PresentModes;
+            var cap = surface.GetCapabilities(physicalDevice);
+            var formats = surface.GetFormats(physicalDevice);
+            var modes = surface.GetPresentModes(physicalDevice);
 
             return new SwapchainSupport(cap, new List<VkSurfaceFormatKHR>(formats), new List<VkPresentModeKHR>(modes));
         }
@@ -247,13 +259,13 @@ namespace Samples {
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(List<VkSurfaceFormatKHR> formats) {
             if (formats.Count == 1 && formats[0].format == VkFormat.Undefined) {
                 var result = new VkSurfaceFormatKHR();
-                result.format = VkFormat.B8g8r8a8Unorm;
+                result.format = VkFormat.B8G8R8A8_Unorm;
                 result.colorSpace = VkColorSpaceKHR.SrgbNonlinearKhr;
                 return result;
             }
 
             foreach (var f in formats) {
-                if (f.format == VkFormat.B8g8r8a8Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
+                if (f.format == VkFormat.B8G8R8A8_Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
                     return f;
                 }
             }
@@ -300,7 +312,9 @@ namespace Samples {
             }
 
             var oldSwapchain = swapchain;
-            var info = new SwapchainCreateInfo(surface, oldSwapchain);
+            var info = new SwapchainCreateInfo();
+            info.surface = surface;
+            info.oldSwapchain = oldSwapchain;
             info.minImageCount = imageCount;
             info.imageFormat = surfaceFormat.format;
             info.imageColorSpace = surfaceFormat.colorSpace;
@@ -338,8 +352,9 @@ namespace Samples {
 
             swapchainImageViews = new List<ImageView>();
             foreach (var image in swapchainImages) {
-                var info = new ImageViewCreateInfo(image);
-                info.viewType = VkImageViewType._2d;
+                var info = new ImageViewCreateInfo();
+                info.image = image;
+                info.viewType = VkImageViewType._2D;
                 info.format = swapchainImageFormat;
                 info.components.r = VkComponentSwizzle.Identity;
                 info.components.g = VkComponentSwizzle.Identity;
@@ -358,7 +373,7 @@ namespace Samples {
         void CreateRenderPass() {
             var colorAttachment = new AttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
-            colorAttachment.samples = VkSampleCountFlags._1Bit;
+            colorAttachment.samples = VkSampleCountFlags._1_Bit;
             colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
             colorAttachment.storeOp = VkAttachmentStoreOp.Store;
             colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
@@ -393,7 +408,8 @@ namespace Samples {
         }
 
         public ShaderModule CreateShaderModule(byte[] code) {
-            var info = new ShaderModuleCreateInfo(code);
+            var info = new ShaderModuleCreateInfo();
+            info.data = code;
             return new ShaderModule(device, info);
         }
 
@@ -438,7 +454,7 @@ namespace Samples {
             rasterizer.frontFace = VkFrontFace.Clockwise;
 
             var multisampling = new PipelineMultisampleStateCreateInfo();
-            multisampling.rasterizationSamples = VkSampleCountFlags._1Bit;
+            multisampling.rasterizationSamples = VkSampleCountFlags._1_Bit;
             multisampling.minSampleShading = 1f;
 
             var colorBlendAttachment = new PipelineColorBlendAttachmentState();
