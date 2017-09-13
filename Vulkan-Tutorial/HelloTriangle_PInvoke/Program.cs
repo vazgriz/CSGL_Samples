@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 using CSGL;
 using CSGL.GLFW;
-using CSGL.Vulkan1;
+using CSGL.Vulkan;
 using CSGL.GLFW.Unmanaged;
-using CSGL.Vulkan1.Unmanaged;
+using CSGL.Vulkan.Unmanaged;
 using System.Runtime.InteropServices;
 
 namespace Samples {
@@ -337,13 +337,13 @@ namespace Samples {
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(List<VkSurfaceFormatKHR> formats) {
             if (formats.Count == 1 && formats[0].format == VkFormat.Undefined) {
                 var result = new VkSurfaceFormatKHR();
-                result.format = VkFormat.B8g8r8a8Unorm;
+                result.format = VkFormat.B8G8R8A8_Unorm;
                 result.colorSpace = VkColorSpaceKHR.SrgbNonlinearKhr;
                 return result;
             }
 
             foreach (var f in formats) {
-                if (f.format == VkFormat.B8g8r8a8Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
+                if (f.format == VkFormat.B8G8R8A8_Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
                     return f;
                 }
             }
@@ -454,7 +454,7 @@ namespace Samples {
                 var info = new VkImageViewCreateInfo();
                 info.sType = VkStructureType.ImageViewCreateInfo;
                 info.image = image;
-                info.viewType = VkImageViewType._2d;
+                info.viewType = VkImageViewType._2D;
                 info.format = swapchainImageFormat;
                 info.components.r = VkComponentSwizzle.Identity;
                 info.components.g = VkComponentSwizzle.Identity;
@@ -475,7 +475,7 @@ namespace Samples {
         void CreateRenderPass() {
             var colorAttachment = new VkAttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
-            colorAttachment.samples = VkSampleCountFlags._1Bit;
+            colorAttachment.samples = VkSampleCountFlags._1_Bit;
             colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
             colorAttachment.storeOp = VkAttachmentStoreOp.Store;
             colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
@@ -535,7 +535,7 @@ namespace Samples {
 
             var info = new VkShaderModuleCreateInfo();
             info.sType = VkStructureType.ShaderModuleCreateInfo;
-            info.codeSize = (ulong)code.LongLength;
+            info.codeSize = (IntPtr)code.LongLength;
             info.pCode = handle.AddrOfPinnedObject();
 
             VkShaderModule temp;
@@ -612,7 +612,7 @@ namespace Samples {
 
             var multisampling = new VkPipelineMultisampleStateCreateInfo();
             multisampling.sType = VkStructureType.PipelineMultisampleStateCreateInfo;
-            multisampling.rasterizationSamples = VkSampleCountFlags._1Bit;
+            multisampling.rasterizationSamples = VkSampleCountFlags._1_Bit;
             multisampling.minSampleShading = 1f;
 
             var multisamplingMarshalled = new Marshalled<VkPipelineMultisampleStateCreateInfo>(multisampling);
