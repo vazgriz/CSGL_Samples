@@ -38,6 +38,15 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CSGL.OpenGL, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.OpenGL.dll</HintPath>
+    </Reference>
+    <Reference Include="CSGL.STB, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.STB.dll</HintPath>
+    </Reference>
+    <Reference Include="CSGL.Vulkan, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.Vulkan.dll</HintPath>
+    </Reference>
     <Reference Include="CSharpGameLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSharpGameLibrary.dll</HintPath>
     </Reference>
