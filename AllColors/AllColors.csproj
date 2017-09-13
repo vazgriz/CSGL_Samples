@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2A375618-4FCC-482D-87D6-65F8DA9C7E03}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AllColors</RootNamespace>
     <AssemblyName>AllColors</AssemblyName>
@@ -56,6 +56,15 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="CSGL.OpenGL, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.OpenGL.dll</HintPath>
+    </Reference>
+    <Reference Include="CSGL.STB, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.STB.dll</HintPath>
+    </Reference>
+    <Reference Include="CSGL.Vulkan, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSGL.Vulkan.dll</HintPath>
+    </Reference>
     <Reference Include="CSharpGameLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\CSharpGameLibrary.0.1.5-alpha\lib\net46\CSharpGameLibrary.dll</HintPath>
     </Reference>
