@@ -123,8 +123,6 @@ namespace Samples {
         DeviceMemory vertexBufferMemory;
         Buffer indexBuffer;
         DeviceMemory indexBufferMemory;
-        Buffer uniformStagingBuffer;
-        DeviceMemory uniformStagingBufferMemory;
         Buffer uniformBuffer;
         DeviceMemory uniformBufferMemory;
         DescriptorPool descriptorPool;
@@ -170,8 +168,6 @@ namespace Samples {
             descriptorPool.Dispose();
             uniformBufferMemory.Dispose();
             uniformBuffer.Dispose();
-            uniformStagingBufferMemory.Dispose();
-            uniformStagingBuffer.Dispose();
             indexBufferMemory.Dispose();
             indexBuffer.Dispose();
             vertexBufferMemory.Dispose();
@@ -270,11 +266,9 @@ namespace Samples {
 
             ulong size = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var data = uniformStagingBufferMemory.Map(0, size);
+            var data = uniformBufferMemory.Map(0, size);
             Interop.Copy(new UniformBufferObject[] { ubo }, data);
-            uniformStagingBufferMemory.Unmap();
-
-            CopyBuffer(uniformStagingBuffer, uniformBuffer, size);
+            uniformBufferMemory.Unmap();
         }
 
         void RecreateSwapchain() {
@@ -774,16 +768,10 @@ namespace Samples {
             ulong bufferSize = (ulong)Interop.SizeOf<UniformBufferObject>();
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.TransferSrcBit,
-                VkMemoryPropertyFlags.HostVisibleBit
-                | VkMemoryPropertyFlags.HostCoherentBit,
-                out uniformStagingBuffer,
-                out uniformStagingBufferMemory);
-
-            CreateBuffer(bufferSize,
                 VkBufferUsageFlags.TransferDstBit
                 | VkBufferUsageFlags.UniformBufferBit,
-                VkMemoryPropertyFlags.DeviceLocalBit,
+                VkMemoryPropertyFlags.HostVisibleBit |
+                VkMemoryPropertyFlags.HostCoherentBit,
                 out uniformBuffer,
                 out uniformBufferMemory);
         }
