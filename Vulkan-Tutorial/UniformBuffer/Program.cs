@@ -770,8 +770,8 @@ namespace Samples {
             CreateBuffer(bufferSize,
                 VkBufferUsageFlags.TransferDstBit
                 | VkBufferUsageFlags.UniformBufferBit,
-                VkMemoryPropertyFlags.HostVisibleBit |
-                VkMemoryPropertyFlags.HostCoherentBit,
+                VkMemoryPropertyFlags.HostVisibleBit
+                | VkMemoryPropertyFlags.HostCoherentBit,
                 out uniformBuffer,
                 out uniformBufferMemory);
         }
