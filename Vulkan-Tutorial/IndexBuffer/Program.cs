@@ -275,11 +275,11 @@ namespace Samples {
         void CreateDebugCallbacks() {
             DebugReportCallbackCreateInfo info = new DebugReportCallbackCreateInfo {
                 callback = DebugCallback,
-                flags = VkDebugReportFlagsEXT.DebugBitExt |
-                        VkDebugReportFlagsEXT.ErrorBitExt |
-                        VkDebugReportFlagsEXT.InformationBitExt |
-                        VkDebugReportFlagsEXT.PerformanceWarningBitExt |
-                        VkDebugReportFlagsEXT.WarningBitExt
+                flags = VkDebugReportFlagsEXT.DebugBitExt
+                        | VkDebugReportFlagsEXT.ErrorBitExt
+                        | VkDebugReportFlagsEXT.InformationBitExt
+                        | VkDebugReportFlagsEXT.PerformanceWarningBitExt
+                        | VkDebugReportFlagsEXT.WarningBitExt
             };
 
             debugCallbacks = new DebugReportCallback(instance, info);
