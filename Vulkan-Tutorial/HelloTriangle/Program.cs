@@ -26,6 +26,10 @@ namespace Samples {
             "VK_KHR_swapchain"
         };
 
+        List<string> instanceExtensions = new List<string> {
+            "VK_EXT_debug_report"
+        };
+
         int width = 800;
         int height = 600;
         WindowPtr window;
@@ -39,6 +43,7 @@ namespace Samples {
         VkExtent2D swapchainExtent;
 
         Instance instance;
+        DebugReportCallback debugCallbacks;
         Surface surface;
         PhysicalDevice physicalDevice;
         Device device;
@@ -60,6 +65,7 @@ namespace Samples {
             GLFW.Init();
             CreateWindow();
             CreateInstance();
+            CreateDebugCallbacks();
             CreateSurface();
             PickPhysicalDevice();
             PickQueues();
@@ -88,6 +94,7 @@ namespace Samples {
             swapchain.Dispose();
             device.Dispose();
             surface.Dispose();
+            debugCallbacks.Dispose();
             instance.Dispose();
             GLFW.DestroyWindow(window);
             GLFW.Terminate();
@@ -175,6 +182,9 @@ namespace Samples {
 
         void CreateInstance() {
             var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
+            foreach (var extension in instanceExtensions) {
+                extensions.Add(extension);
+            }
 
             var appInfo = new ApplicationInfo {
                 apiVersion = new VkVersion(1, 0, 0),
@@ -189,6 +199,31 @@ namespace Samples {
                 layers = layers
             };
             instance = new Instance(info);
+        }
+
+        void DebugCallback(
+            VkDebugReportFlagsEXT flags, 
+            VkDebugReportObjectTypeEXT objectType, 
+            ulong _object, ulong location, 
+            int messageCode, string layerPrefix, string message) {
+
+            string type = flags.ToString();
+            type = type.Substring(0, type.Length - 6);  //strip "BitExt"
+
+            Console.WriteLine("[{0}] {1}", type, message);
+        }
+
+        void CreateDebugCallbacks() {
+            DebugReportCallbackCreateInfo info = new DebugReportCallbackCreateInfo {
+                callback = DebugCallback,
+                flags = VkDebugReportFlagsEXT.DebugBitExt |
+                        VkDebugReportFlagsEXT.ErrorBitExt |
+                        VkDebugReportFlagsEXT.InformationBitExt |
+                        VkDebugReportFlagsEXT.PerformanceWarningBitExt |
+                        VkDebugReportFlagsEXT.WarningBitExt
+            };
+
+            debugCallbacks = new DebugReportCallback(instance, info);
         }
 
         void PickPhysicalDevice() {
