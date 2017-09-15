@@ -88,6 +88,10 @@ namespace Samples {
             "VK_KHR_swapchain"
         };
 
+        List<string> instanceExtensions = new List<string> {
+            "VK_EXT_debug_report"
+        };
+
         string image = "lenna.png";
 
         Vertex[] vertices = {
@@ -120,6 +124,7 @@ namespace Samples {
         VkExtent2D swapchainExtent;
 
         Instance instance;
+        DebugReportCallback debugCallbacks;
         Surface surface;
         PhysicalDevice physicalDevice;
         Device device;
@@ -143,8 +148,6 @@ namespace Samples {
         DeviceMemory vertexBufferMemory;
         Buffer indexBuffer;
         DeviceMemory indexBufferMemory;
-        Buffer uniformStagingBuffer;
-        DeviceMemory uniformStagingBufferMemory;
         Buffer uniformBuffer;
         DeviceMemory uniformBufferMemory;
         DescriptorPool descriptorPool;
@@ -161,6 +164,7 @@ namespace Samples {
             GLFW.Init();
             CreateWindow();
             CreateInstance();
+            CreateDebugCallbacks();
             CreateSurface();
             PickPhysicalDevice();
             PickQueues();
@@ -193,8 +197,6 @@ namespace Samples {
             descriptorPool.Dispose();
             uniformBufferMemory.Dispose();
             uniformBuffer.Dispose();
-            uniformStagingBufferMemory.Dispose();
-            uniformStagingBuffer.Dispose();
             indexBufferMemory.Dispose();
             indexBuffer.Dispose();
             vertexBufferMemory.Dispose();
@@ -216,6 +218,7 @@ namespace Samples {
             swapchain.Dispose();
             device.Dispose();
             surface.Dispose();
+            debugCallbacks.Dispose();
             instance.Dispose();
             GLFW.DestroyWindow(window);
             GLFW.Terminate();
@@ -299,11 +302,9 @@ namespace Samples {
 
             ulong size = (ulong)Interop.SizeOf<UniformBufferObject>();
 
-            var data = uniformStagingBufferMemory.Map(0, size);
+            var data = uniformBufferMemory.Map(0, size);
             Interop.Copy(new UniformBufferObject[] { ubo }, data);
-            uniformStagingBufferMemory.Unmap();
-
-            CopyBuffer(uniformStagingBuffer, uniformBuffer, size);
+            uniformBufferMemory.Unmap();
         }
 
         void RecreateSwapchain() {
@@ -330,6 +331,9 @@ namespace Samples {
 
         void CreateInstance() {
             var extensions = new List<string>(GLFW.GetRequiredInstanceExceptions());
+            foreach (var extension in instanceExtensions) {
+                extensions.Add(extension);
+            }
 
             var appInfo = new ApplicationInfo {
                 apiVersion = new VkVersion(1, 0, 0),
@@ -344,6 +348,31 @@ namespace Samples {
                 layers = layers
             };
             instance = new Instance(info);
+        }
+
+        void DebugCallback(
+            VkDebugReportFlagsEXT flags,
+            VkDebugReportObjectTypeEXT objectType,
+            ulong _object, ulong location,
+            int messageCode, string layerPrefix, string message) {
+
+            string type = flags.ToString();
+            type = type.Substring(0, type.Length - 6);  //strip "BitExt"
+
+            Console.WriteLine("[{0}] {1}", type, message);
+        }
+
+        void CreateDebugCallbacks() {
+            DebugReportCallbackCreateInfo info = new DebugReportCallbackCreateInfo {
+                callback = DebugCallback,
+                flags = VkDebugReportFlagsEXT.DebugBitExt
+                        | VkDebugReportFlagsEXT.ErrorBitExt
+                        | VkDebugReportFlagsEXT.InformationBitExt
+                        | VkDebugReportFlagsEXT.PerformanceWarningBitExt
+                        | VkDebugReportFlagsEXT.WarningBitExt
+            };
+
+            debugCallbacks = new DebugReportCallback(instance, info);
         }
 
         void PickPhysicalDevice() {
@@ -1053,16 +1082,10 @@ namespace Samples {
             ulong bufferSize = (ulong)Interop.SizeOf<UniformBufferObject>();
 
             CreateBuffer(bufferSize,
-                VkBufferUsageFlags.TransferSrcBit,
-                VkMemoryPropertyFlags.HostVisibleBit
-                | VkMemoryPropertyFlags.HostCoherentBit,
-                out uniformStagingBuffer,
-                out uniformStagingBufferMemory);
-
-            CreateBuffer(bufferSize,
                 VkBufferUsageFlags.TransferDstBit
                 | VkBufferUsageFlags.UniformBufferBit,
-                VkMemoryPropertyFlags.DeviceLocalBit,
+                VkMemoryPropertyFlags.HostVisibleBit
+                | VkMemoryPropertyFlags.HostCoherentBit,
                 out uniformBuffer,
                 out uniformBufferMemory);
         }
