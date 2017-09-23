@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 using CSGL;
 using CSGL.GLFW;
-using CSGL.Vulkan;
 using CSGL.GLFW.Unmanaged;
 using CSGL.Vulkan.Unmanaged;
 using System.Runtime.InteropServices;
@@ -39,8 +38,19 @@ namespace Samples {
         VkQueue graphicsQueue;
         VkQueue presentQueue;
 
-        VkFormat swapchainImageFormat;
+        CSGL.Vulkan.VkFormat swapchainImageFormat;
         VkExtent2D swapchainExtent;
+
+        vkDestroySurfaceKHRDelegate destroySurface;
+        vkCreateSwapchainKHRDelegate createSwapchain;
+        vkGetPhysicalDeviceSurfaceSupportKHRDelegate getPhysicalDeviceSurfaceSupport;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHRDelegate getPhysicalDeviceSurfaceCapabilities;
+        vkGetPhysicalDeviceSurfaceFormatsKHRDelegate getPhysicalDeviceSurfaceFormats;
+        vkGetPhysicalDeviceSurfacePresentModesKHRDelegate getPhysicalDeviceSurfacePresentModes;
+        vkDestroySwapchainKHRDelegate destroySwapchain;
+        vkGetSwapchainImagesKHRDelegate getSwapchainImages;
+        vkAcquireNextImageKHRDelegate acquireNextImage;
+        vkQueuePresentKHRDelegate queuePresent;
 
         IntPtr alloc = IntPtr.Zero;
         VkInstance instance;
@@ -64,6 +74,7 @@ namespace Samples {
         void Run() {
             CreateWindow();
             CreateInstance();
+            CreateDelegates();
             CreateSurface();
             PickPhysicalDevice();
             PickQueues();
@@ -89,24 +100,24 @@ namespace Samples {
             VK.DestroyPipelineLayout(device, pipelineLayout, alloc);
             VK.DestroyRenderPass(device, renderPass, alloc);
             foreach (var iv in swapchainImageViews) VK.DestroyImageView(device, iv, alloc);
-            VK.DestroySwapchainKHR(device, swapchain, alloc);
+            destroySwapchain(device, swapchain, alloc);
             VK.DestroyDevice(device, alloc);
-            VK.DestroySurfaceKHR(instance, surface, alloc);
+            destroySurface(instance, surface, alloc);
             VK.DestroyInstance(instance, alloc);
             GLFW.Terminate();
         }
 
         void MainLoop() {
             var submitInfo = new VkSubmitInfo();
-            submitInfo.sType = VkStructureType.SubmitInfo;
+            submitInfo.sType = CSGL.Vulkan.VkStructureType.SubmitInfo;
 
-            var waitSemaphores = new Marshalled<VkSemaphore>(imageAvailableSemaphore);
-            var waitStages = new Marshalled<uint>((uint)VkPipelineStageFlags.ColorAttachmentOutputBit);
-            var signalSemaphores = new Marshalled<VkSemaphore>(renderFinishedSemaphore);
-            var swapchains = new Marshalled<VkSwapchainKHR>(swapchain);
+            var waitSemaphores = new Native<VkSemaphore>(imageAvailableSemaphore);
+            var waitStages = new Native<CSGL.Vulkan.VkPipelineStageFlags>(CSGL.Vulkan.VkPipelineStageFlags.ColorAttachmentOutputBit);
+            var signalSemaphores = new Native<VkSemaphore>(renderFinishedSemaphore);
+            var swapchains = new Native<VkSwapchainKHR>(swapchain);
 
-            var commandBuffer = new Marshalled<VkCommandBuffer>();
-            var indexMarshalled = new Marshalled<uint>();
+            var commandBuffer = new Native<VkCommandBuffer>();
+            var indexNative = new Native<uint>();
 
             submitInfo.waitSemaphoreCount = 1;
             submitInfo.pWaitSemaphores = waitSemaphores.Address;
@@ -116,15 +127,15 @@ namespace Samples {
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = signalSemaphores.Address;
 
-            var submitInfoMarshalled = new Marshalled<VkSubmitInfo>(submitInfo);
+            var submitInfoNative = new Native<VkSubmitInfo>(submitInfo);
 
             var presentInfo = new VkPresentInfoKHR();
-            presentInfo.sType = VkStructureType.PresentInfoKhr;
+            presentInfo.sType = CSGL.Vulkan.VkStructureType.PresentInfoKhr;
             presentInfo.waitSemaphoreCount = 1;
             presentInfo.pWaitSemaphores = signalSemaphores.Address;
             presentInfo.swapchainCount = 1;
             presentInfo.pSwapchains = swapchains.Address;
-            presentInfo.pImageIndices = indexMarshalled.Address;
+            presentInfo.pImageIndices = indexNative.Address;
 
             while (true) {
                 GLFW.PollEvents();
@@ -136,21 +147,21 @@ namespace Samples {
                 }
 
                 uint imageIndex;
-                var result = VK.AcquireNextImageKHR(device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, out imageIndex);
+                var result = acquireNextImage(device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, out imageIndex);
 
-                if (result == VkResult.ErrorOutOfDateKhr || result == VkResult.SuboptimalKhr) {
+                if (result == CSGL.Vulkan.VkResult.ErrorOutOfDateKhr || result == CSGL.Vulkan.VkResult.SuboptimalKhr) {
                     RecreateSwapchain();
                     continue;
                 }
 
                 commandBuffer.Value = commandBuffers[(int)imageIndex];
                 swapchains.Value = swapchain;
-                indexMarshalled.Value = imageIndex;
+                indexNative.Value = imageIndex;
 
-                VK.QueueSubmit(graphicsQueue, 1, submitInfoMarshalled.Address, VkFence.Null);
-                result = VK.QueuePresentKHR(presentQueue, ref presentInfo);
+                VK.QueueSubmit(graphicsQueue, 1, submitInfoNative.Address, VkFence.Null);
+                result = queuePresent(presentQueue, ref presentInfo);
 
-                if (result == VkResult.ErrorOutOfDateKhr || result == VkResult.SuboptimalKhr) {
+                if (result == CSGL.Vulkan.VkResult.ErrorOutOfDateKhr || result == CSGL.Vulkan.VkResult.SuboptimalKhr) {
                     RecreateSwapchain();
                 }
             }
@@ -161,7 +172,7 @@ namespace Samples {
             signalSemaphores.Dispose();
             swapchains.Dispose();
             commandBuffer.Dispose();
-            submitInfoMarshalled.Dispose();
+            submitInfoNative.Dispose();
         }
 
         void RecreateSwapchain() {
@@ -190,33 +201,46 @@ namespace Samples {
             var appName = new InteropString("Hello Triangle");
 
             var appInfo = new VkApplicationInfo();
-            appInfo.sType = VkStructureType.ApplicationInfo;
+            appInfo.sType = CSGL.Vulkan.VkStructureType.ApplicationInfo;
             appInfo.pApplicationName = appName.Address;
-            appInfo.applicationVersion = new VkVersion(1, 0, 0);
-            appInfo.engineVersion = new VkVersion(0, 0, 1);
-            appInfo.apiVersion = new VkVersion(1, 0, 0);
+            appInfo.applicationVersion = new CSGL.Vulkan.VkVersion(1, 0, 0);
+            appInfo.engineVersion = new CSGL.Vulkan.VkVersion(0, 0, 1);
+            appInfo.apiVersion = new CSGL.Vulkan.VkVersion(1, 0, 0);
 
-            var appInfoMarshalled = new Marshalled<VkApplicationInfo>(appInfo);
+            var appInfoNative = new Native<VkApplicationInfo>(appInfo);
 
             var info = new VkInstanceCreateInfo();
-            info.sType = VkStructureType.InstanceCreateInfo;
-            info.pApplicationInfo = appInfoMarshalled.Address;
+            info.sType = CSGL.Vulkan.VkStructureType.InstanceCreateInfo;
+            info.pApplicationInfo = appInfoNative.Address;
 
             var extensions = GLFW.GetRequiredInstanceExceptions();
-            var extensionsMarshalled = new NativeStringArray(extensions);
-            info.ppEnabledExtensionNames = extensionsMarshalled.Address;
-            info.enabledExtensionCount = (uint)extensions.Length;
+            var extensionsNative = new NativeStringArray(extensions);
+            info.ppEnabledExtensionNames = extensionsNative.Address;
+            info.enabledExtensionCount = (uint)extensions.Count;
 
-            var layersMarshalled = new NativeStringArray(layers);
-            info.ppEnabledLayerNames = layersMarshalled.Address;
+            var layersNative = new NativeStringArray(layers);
+            info.ppEnabledLayerNames = layersNative.Address;
             info.enabledLayerCount = (uint)layers.Length;
 
             var result = VK.CreateInstance(ref info, alloc, out instance);
 
             appName.Dispose();
-            appInfoMarshalled.Dispose();
-            extensionsMarshalled.Dispose();
-            layersMarshalled.Dispose();
+            appInfoNative.Dispose();
+            extensionsNative.Dispose();
+            layersNative.Dispose();
+        }
+
+        void CreateDelegates() {
+            VK.Load(ref destroySurface, instance);
+            VK.Load(ref getPhysicalDeviceSurfaceSupport, instance);
+            VK.Load(ref getPhysicalDeviceSurfaceCapabilities, instance);
+            VK.Load(ref getPhysicalDeviceSurfaceFormats, instance);
+            VK.Load(ref getPhysicalDeviceSurfacePresentModes, instance);
+            VK.Load(ref createSwapchain, instance);
+            VK.Load(ref destroySwapchain, instance);
+            VK.Load(ref getSwapchainImages, instance);
+            VK.Load(ref acquireNextImage, instance);
+            VK.Load(ref queuePresent, instance);
         }
 
         void CreateSurface() {
@@ -227,7 +251,7 @@ namespace Samples {
         void PickPhysicalDevice() {
             uint count = 0;
             VK.EnumeratePhysicalDevices(instance, ref count, IntPtr.Zero);
-            var devices = new MarshalledArray<VkPhysicalDevice>(count);
+            var devices = new NativeArray<VkPhysicalDevice>(count);
             VK.EnumeratePhysicalDevices(instance, ref count, devices.Address);
 
             physicalDevice = devices[0];
@@ -238,19 +262,19 @@ namespace Samples {
         void PickQueues() {
             uint count = 0;
             VK.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, ref count, IntPtr.Zero);
-            var queues = new MarshalledArray<VkQueueFamilyProperties>(count);
+            var queues = new NativeArray<VkQueueFamilyProperties>(count);
             VK.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, ref count, queues.Address);
 
             int g = -1;
             int p = -1;
 
             for (int i = 0; i < count; i++) {
-                if (g == -1 && queues[i].queueCount > 0 && (queues[i].queueFlags & VkQueueFlags.GraphicsBit) != 0) {
+                if (g == -1 && queues[i].queueCount > 0 && (queues[i].queueFlags & CSGL.Vulkan.VkQueueFlags.GraphicsBit) != 0) {
                     g = i;
                 }
 
                 bool support;
-                VK.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint)i, surface, out support);
+                getPhysicalDeviceSurfaceSupport(physicalDevice, (uint)i, surface, out support);
                 if (p == -1 && queues[i].queueCount > 0 && support) {
                     p = i;
                 }
@@ -263,17 +287,17 @@ namespace Samples {
         }
 
         void CreateDevice() {
-            var features = new Marshalled<VkPhysicalDeviceFeatures>();
+            var features = new Native<VkPhysicalDeviceFeatures>();
             VK.GetPhysicalDeviceFeatures(physicalDevice, features.Address);
 
             HashSet<uint> uniqueIndices = new HashSet<uint> { graphicsIndex, presentIndex };
-            var queueInfos = new MarshalledArray<VkDeviceQueueCreateInfo>(uniqueIndices.Count);
-            var priorities = new Marshalled<float>(1);
+            var queueInfos = new NativeArray<VkDeviceQueueCreateInfo>(uniqueIndices.Count);
+            var priorities = new Native<float>(1);
 
             int i = 0;
             foreach (var ind in uniqueIndices) {
                 var queueInfo = new VkDeviceQueueCreateInfo();
-                queueInfo.sType = VkStructureType.DeviceQueueCreateInfo;
+                queueInfo.sType = CSGL.Vulkan.VkStructureType.DeviceQueueCreateInfo;
                 queueInfo.queueFamilyIndex = ind;
                 queueInfo.queueCount = 1;
 
@@ -284,13 +308,13 @@ namespace Samples {
             }
 
             var info = new VkDeviceCreateInfo();
-            info.sType = VkStructureType.DeviceCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.DeviceCreateInfo;
             info.pQueueCreateInfos = queueInfos.Address;
             info.queueCreateInfoCount = (uint)uniqueIndices.Count;
             info.pEnabledFeatures = features.Address;
 
-            var extensionsMarshalled = new NativeStringArray(deviceExtensions);
-            info.ppEnabledExtensionNames = extensionsMarshalled.Address;
+            var extensionsNative = new NativeStringArray(deviceExtensions);
+            info.ppEnabledExtensionNames = extensionsNative.Address;
             info.enabledExtensionCount = (uint)deviceExtensions.Length;
 
             var result = VK.CreateDevice(physicalDevice, ref info, alloc, out device);
@@ -301,49 +325,49 @@ namespace Samples {
             features.Dispose();
             priorities.Dispose();
             queueInfos.Dispose();
-            extensionsMarshalled.Dispose();
+            extensionsNative.Dispose();
         }
 
         SwapchainSupport GetSwapchainSupport(VkPhysicalDevice device) {
-            var capMarshalled = new Marshalled<VkSurfaceCapabilitiesKHR>();
-            VK.GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, capMarshalled.Address);
+            var capNative = new Native<VkSurfaceCapabilitiesKHR>();
+            getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface, capNative.Address);
 
             uint count = 0;
-            VK.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, ref count, IntPtr.Zero);
-            var formatsMarshalled = new MarshalledArray<VkSurfaceFormatKHR>(count);
-            VK.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, ref count, formatsMarshalled.Address);
+            getPhysicalDeviceSurfaceFormats(physicalDevice, surface, ref count, IntPtr.Zero);
+            var formatsNative = new NativeArray<VkSurfaceFormatKHR>(count);
+            getPhysicalDeviceSurfaceFormats(physicalDevice, surface, ref count, formatsNative.Address);
 
             var formats = new List<VkSurfaceFormatKHR>((int)count);
             for (int i = 0; i < count; i++) {
-                formats.Add(formatsMarshalled[i]);
+                formats.Add(formatsNative[i]);
             }
 
             count = 0;
-            VK.GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, ref count, IntPtr.Zero);
-            var modesMarshalled = new MarshalledArray<int>(count);
-            VK.GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, ref count, modesMarshalled.Address);
+            getPhysicalDeviceSurfacePresentModes(physicalDevice, surface, ref count, IntPtr.Zero);
+            var modesNative = new NativeArray<int>(count);
+            getPhysicalDeviceSurfacePresentModes(physicalDevice, surface, ref count, modesNative.Address);
 
-            var modes = new List<VkPresentModeKHR>((int)count);
+            var modes = new List<CSGL.Vulkan.VkPresentModeKHR>((int)count);
             for (int i = 0; i < count; i++) {
-                modes.Add((VkPresentModeKHR)modesMarshalled[i]);
+                modes.Add((CSGL.Vulkan.VkPresentModeKHR)modesNative[i]);
             }
 
-            formatsMarshalled.Dispose();
-            modesMarshalled.Dispose();
+            formatsNative.Dispose();
+            modesNative.Dispose();
 
-            return new SwapchainSupport(capMarshalled, formats, modes);
+            return new SwapchainSupport(capNative, formats, modes);
         }
 
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(List<VkSurfaceFormatKHR> formats) {
-            if (formats.Count == 1 && formats[0].format == VkFormat.Undefined) {
+            if (formats.Count == 1 && formats[0].format == CSGL.Vulkan.VkFormat.Undefined) {
                 var result = new VkSurfaceFormatKHR();
-                result.format = VkFormat.B8G8R8A8_Unorm;
-                result.colorSpace = VkColorSpaceKHR.SrgbNonlinearKhr;
+                result.format = CSGL.Vulkan.VkFormat.B8G8R8A8_Unorm;
+                result.colorSpace = CSGL.Vulkan.VkColorSpaceKHR.SrgbNonlinearKhr;
                 return result;
             }
 
             foreach (var f in formats) {
-                if (f.format == VkFormat.B8G8R8A8_Unorm && f.colorSpace == VkColorSpaceKHR.SrgbNonlinearKhr) {
+                if (f.format == CSGL.Vulkan.VkFormat.B8G8R8A8_Unorm && f.colorSpace == CSGL.Vulkan.VkColorSpaceKHR.SrgbNonlinearKhr) {
                     return f;
                 }
             }
@@ -351,14 +375,14 @@ namespace Samples {
             return formats[0];
         }
 
-        VkPresentModeKHR ChooseSwapPresentMode(List<VkPresentModeKHR> modes) {
+        CSGL.Vulkan.VkPresentModeKHR ChooseSwapPresentMode(List<CSGL.Vulkan.VkPresentModeKHR> modes) {
             foreach (var m in modes) {
-                if (m == VkPresentModeKHR.MailboxKhr) {
+                if (m == CSGL.Vulkan.VkPresentModeKHR.MailboxKhr) {
                     return m;
                 }
             }
 
-            return VkPresentModeKHR.FifoKhr;
+            return CSGL.Vulkan.VkPresentModeKHR.FifoKhr;
         }
 
         VkExtent2D ChooseSwapExtent(ref VkSurfaceCapabilitiesKHR cap) {
@@ -390,29 +414,29 @@ namespace Samples {
             }
 
             var info = new VkSwapchainCreateInfoKHR();
-            info.sType = VkStructureType.SwapchainCreateInfoKhr;
+            info.sType = CSGL.Vulkan.VkStructureType.SwapchainCreateInfoKhr;
             info.surface = surface;
             info.minImageCount = imageCount;
             info.imageFormat = surfaceFormat.format;
             info.imageColorSpace = surfaceFormat.colorSpace;
             info.imageExtent = extent;
             info.imageArrayLayers = 1;
-            info.imageUsage = VkImageUsageFlags.ColorAttachmentBit;
+            info.imageUsage = CSGL.Vulkan.VkImageUsageFlags.ColorAttachmentBit;
 
-            var queueFamilyIndices = new MarshalledArray<uint>(2);
+            var queueFamilyIndices = new NativeArray<uint>(2);
             queueFamilyIndices[0] = graphicsIndex;
             queueFamilyIndices[1] = presentIndex;
 
             if (graphicsIndex != presentIndex) {
-                info.imageSharingMode = VkSharingMode.Concurrent;
+                info.imageSharingMode = CSGL.Vulkan.VkSharingMode.Concurrent;
                 info.queueFamilyIndexCount = 2;
                 info.pQueueFamilyIndices = queueFamilyIndices.Address;
             } else {
-                info.imageSharingMode = VkSharingMode.Exclusive;
+                info.imageSharingMode = CSGL.Vulkan.VkSharingMode.Exclusive;
             }
 
             info.preTransform = cap.currentTransform;
-            info.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueBitKhr;
+            info.compositeAlpha = CSGL.Vulkan.VkCompositeAlphaFlagsKHR.OpaqueBitKhr;
             info.presentMode = mode;
             info.clipped = 1;
 
@@ -420,21 +444,21 @@ namespace Samples {
             info.oldSwapchain = oldSwapchain;
 
             VkSwapchainKHR newSwapchain;
-            var result = VK.CreateSwapchainKHR(device, ref info, alloc, out newSwapchain);
+            var result = createSwapchain(device, ref info, alloc, out newSwapchain);
 
             if (swapchain != VkSwapchainKHR.Null) {
-                VK.DestroySwapchainKHR(device, swapchain, alloc);
+                destroySwapchain(device, swapchain, alloc);
             }
             swapchain = newSwapchain;
 
-            VK.GetSwapchainImagesKHR(device, swapchain, ref imageCount, IntPtr.Zero);
-            var swapchainImagesMarshalled = new MarshalledArray<VkImage>(imageCount);
-            VK.GetSwapchainImagesKHR(device, swapchain, ref imageCount, swapchainImagesMarshalled.Address);
+            getSwapchainImages(device, swapchain, ref imageCount, IntPtr.Zero);
+            var swapchainImagesNative = new NativeArray<VkImage>(imageCount);
+            getSwapchainImages(device, swapchain, ref imageCount, swapchainImagesNative.Address);
 
-            swapchainImages = new List<VkImage>(swapchainImagesMarshalled.Count);
+            swapchainImages = new List<VkImage>(swapchainImagesNative.Count);
 
             for (int i = 0; i < imageCount; i++) {
-                swapchainImages.Add(swapchainImagesMarshalled[i]);
+                swapchainImages.Add(swapchainImagesNative[i]);
             }
 
             swapchainImageFormat = surfaceFormat.format;
@@ -452,15 +476,15 @@ namespace Samples {
 
             foreach (var image in swapchainImages) {
                 var info = new VkImageViewCreateInfo();
-                info.sType = VkStructureType.ImageViewCreateInfo;
+                info.sType = CSGL.Vulkan.VkStructureType.ImageViewCreateInfo;
                 info.image = image;
-                info.viewType = VkImageViewType._2D;
+                info.viewType = CSGL.Vulkan.VkImageViewType._2D;
                 info.format = swapchainImageFormat;
-                info.components.r = VkComponentSwizzle.Identity;
-                info.components.g = VkComponentSwizzle.Identity;
-                info.components.b = VkComponentSwizzle.Identity;
-                info.components.a = VkComponentSwizzle.Identity;
-                info.subresourceRange.aspectMask = VkImageAspectFlags.ColorBit;
+                info.components.r = CSGL.Vulkan.VkComponentSwizzle.Identity;
+                info.components.g = CSGL.Vulkan.VkComponentSwizzle.Identity;
+                info.components.b = CSGL.Vulkan.VkComponentSwizzle.Identity;
+                info.components.a = CSGL.Vulkan.VkComponentSwizzle.Identity;
+                info.subresourceRange.aspectMask = CSGL.Vulkan.VkImageAspectFlags.ColorBit;
                 info.subresourceRange.baseMipLevel = 0;
                 info.subresourceRange.levelCount = 1;
                 info.subresourceRange.baseArrayLayer = 0;
@@ -475,48 +499,48 @@ namespace Samples {
         void CreateRenderPass() {
             var colorAttachment = new VkAttachmentDescription();
             colorAttachment.format = swapchainImageFormat;
-            colorAttachment.samples = VkSampleCountFlags._1_Bit;
-            colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
-            colorAttachment.storeOp = VkAttachmentStoreOp.Store;
-            colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-            colorAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
-            colorAttachment.initialLayout = VkImageLayout.Undefined;
-            colorAttachment.finalLayout = VkImageLayout.PresentSrcKhr;
+            colorAttachment.samples = CSGL.Vulkan.VkSampleCountFlags._1_Bit;
+            colorAttachment.loadOp = CSGL.Vulkan.VkAttachmentLoadOp.Clear;
+            colorAttachment.storeOp = CSGL.Vulkan.VkAttachmentStoreOp.Store;
+            colorAttachment.stencilLoadOp = CSGL.Vulkan.VkAttachmentLoadOp.DontCare;
+            colorAttachment.stencilStoreOp = CSGL.Vulkan.VkAttachmentStoreOp.DontCare;
+            colorAttachment.initialLayout = CSGL.Vulkan.VkImageLayout.Undefined;
+            colorAttachment.finalLayout = CSGL.Vulkan.VkImageLayout.PresentSrcKhr;
 
-            var colorAttachmentMarshalled = new Marshalled<VkAttachmentDescription>(colorAttachment);
+            var colorAttachmentNative = new Native<VkAttachmentDescription>(colorAttachment);
 
             var colorAttachmentRef = new VkAttachmentReference();
             colorAttachmentRef.attachment = 0;
-            colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
+            colorAttachmentRef.layout = CSGL.Vulkan.VkImageLayout.ColorAttachmentOptimal;
 
-            var colorAttachmentRefMarshalled = new Marshalled<VkAttachmentReference>(colorAttachmentRef);
+            var colorAttachmentRefNative = new Native<VkAttachmentReference>(colorAttachmentRef);
 
             var subpass = new VkSubpassDescription();
-            subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
+            subpass.pipelineBindPoint = CSGL.Vulkan.VkPipelineBindPoint.Graphics;
             subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments = colorAttachmentRefMarshalled.Address;
+            subpass.pColorAttachments = colorAttachmentRefNative.Address;
 
-            var subpassMarshalled = new Marshalled<VkSubpassDescription>(subpass);
+            var subpassNative = new Native<VkSubpassDescription>(subpass);
 
             var dependency = new VkSubpassDependency();
             dependency.srcSubpass = uint.MaxValue;  //VK_SUBPASS_EXTERNAL
             dependency.dstSubpass = 0;
-            dependency.srcStageMask = VkPipelineStageFlags.BottomOfPipeBit;
-            dependency.srcAccessMask = VkAccessFlags.MemoryReadBit;
-            dependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutputBit;
-            dependency.dstAccessMask = VkAccessFlags.ColorAttachmentReadBit
-                                    | VkAccessFlags.ColorAttachmentWriteBit;
+            dependency.srcStageMask = CSGL.Vulkan.VkPipelineStageFlags.BottomOfPipeBit;
+            dependency.srcAccessMask = CSGL.Vulkan.VkAccessFlags.MemoryReadBit;
+            dependency.dstStageMask = CSGL.Vulkan.VkPipelineStageFlags.ColorAttachmentOutputBit;
+            dependency.dstAccessMask = CSGL.Vulkan.VkAccessFlags.ColorAttachmentReadBit
+                                    | CSGL.Vulkan.VkAccessFlags.ColorAttachmentWriteBit;
 
-            var dependencyMarshalled = new Marshalled<VkSubpassDependency>(dependency);
+            var dependencyNative = new Native<VkSubpassDependency>(dependency);
 
             var info = new VkRenderPassCreateInfo();
-            info.sType = VkStructureType.RenderPassCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.RenderPassCreateInfo;
             info.attachmentCount = 1;
-            info.pAttachments = colorAttachmentMarshalled.Address;
+            info.pAttachments = colorAttachmentNative.Address;
             info.subpassCount = 1;
-            info.pSubpasses = subpassMarshalled.Address;
+            info.pSubpasses = subpassNative.Address;
             info.dependencyCount = 1;
-            info.pDependencies = dependencyMarshalled.Address;
+            info.pDependencies = dependencyNative.Address;
 
             if (renderPass != VkRenderPass.Null) {
                 VK.DestroyRenderPass(device, renderPass, alloc);
@@ -524,17 +548,17 @@ namespace Samples {
 
             var result = VK.CreateRenderPass(device, ref info, alloc, out renderPass);
 
-            colorAttachmentMarshalled.Dispose();
-            colorAttachmentRefMarshalled.Dispose();
-            subpassMarshalled.Dispose();
-            dependencyMarshalled.Dispose();
+            colorAttachmentNative.Dispose();
+            colorAttachmentRefNative.Dispose();
+            subpassNative.Dispose();
+            dependencyNative.Dispose();
         }
 
         public VkShaderModule CreateShaderModule(byte[] code) {
             GCHandle handle = GCHandle.Alloc(code, GCHandleType.Pinned);
 
             var info = new VkShaderModuleCreateInfo();
-            info.sType = VkStructureType.ShaderModuleCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.ShaderModuleCreateInfo;
             info.codeSize = (IntPtr)code.LongLength;
             info.pCode = handle.AddrOfPinnedObject();
 
@@ -553,31 +577,31 @@ namespace Samples {
             InteropString entry = new InteropString("main");
 
             var vertInfo = new VkPipelineShaderStageCreateInfo();
-            vertInfo.sType = VkStructureType.PipelineShaderStageCreateInfo;
-            vertInfo.stage = VkShaderStageFlags.VertexBit;
+            vertInfo.sType = CSGL.Vulkan.VkStructureType.PipelineShaderStageCreateInfo;
+            vertInfo.stage = CSGL.Vulkan.VkShaderStageFlags.VertexBit;
             vertInfo.module = vert;
             vertInfo.pName = entry.Address;
 
             var fragInfo = new VkPipelineShaderStageCreateInfo();
-            fragInfo.sType = VkStructureType.PipelineShaderStageCreateInfo;
-            fragInfo.stage = VkShaderStageFlags.FragmentBit;
+            fragInfo.sType = CSGL.Vulkan.VkStructureType.PipelineShaderStageCreateInfo;
+            fragInfo.stage = CSGL.Vulkan.VkShaderStageFlags.FragmentBit;
             fragInfo.module = frag;
             fragInfo.pName = entry.Address;
 
-            var shaderStages = new MarshalledArray<VkPipelineShaderStageCreateInfo>(2);
+            var shaderStages = new NativeArray<VkPipelineShaderStageCreateInfo>(2);
             shaderStages[0] = vertInfo;
             shaderStages[1] = fragInfo;
 
             var vertexInputInfo = new VkPipelineVertexInputStateCreateInfo();
-            vertexInputInfo.sType = VkStructureType.PipelineVertexInputStateCreateInfo;
+            vertexInputInfo.sType = CSGL.Vulkan.VkStructureType.PipelineVertexInputStateCreateInfo;
 
-            var vertexInputMarshalled = new Marshalled<VkPipelineVertexInputStateCreateInfo>(vertexInputInfo);
+            var vertexInputNative = new Native<VkPipelineVertexInputStateCreateInfo>(vertexInputInfo);
 
             var inputAssembly = new VkPipelineInputAssemblyStateCreateInfo();
-            inputAssembly.sType = VkStructureType.PipelineInputAssemblyStateCreateInfo;
-            inputAssembly.topology = VkPrimitiveTopology.TriangleList;
+            inputAssembly.sType = CSGL.Vulkan.VkStructureType.PipelineInputAssemblyStateCreateInfo;
+            inputAssembly.topology = CSGL.Vulkan.VkPrimitiveTopology.TriangleList;
 
-            var inputAssemblyMarshalled = new Marshalled<VkPipelineInputAssemblyStateCreateInfo>(inputAssembly);
+            var inputAssemblyNative = new Native<VkPipelineInputAssemblyStateCreateInfo>(inputAssembly);
 
             var viewport = new VkViewport();
             viewport.width = swapchainExtent.width;
@@ -585,62 +609,62 @@ namespace Samples {
             viewport.minDepth = 0f;
             viewport.maxDepth = 1f;
 
-            var viewportMarshalled = new Marshalled<VkViewport>(viewport);
+            var viewportNative = new Native<VkViewport>(viewport);
 
             var scissor = new VkRect2D();
             scissor.extent = swapchainExtent;
 
-            var scissorMarshalled = new Marshalled<VkRect2D>(scissor);
+            var scissorNative = new Native<VkRect2D>(scissor);
 
             var viewportState = new VkPipelineViewportStateCreateInfo();
-            viewportState.sType = VkStructureType.PipelineViewportStateCreateInfo;
+            viewportState.sType = CSGL.Vulkan.VkStructureType.PipelineViewportStateCreateInfo;
             viewportState.viewportCount = 1;
-            viewportState.pViewports = viewportMarshalled.Address;
+            viewportState.pViewports = viewportNative.Address;
             viewportState.scissorCount = 1;
-            viewportState.pScissors = scissorMarshalled.Address;
+            viewportState.pScissors = scissorNative.Address;
 
-            var viewportStateMarshalled = new Marshalled<VkPipelineViewportStateCreateInfo>(viewportState);
+            var viewportStateNative = new Native<VkPipelineViewportStateCreateInfo>(viewportState);
 
             var rasterizer = new VkPipelineRasterizationStateCreateInfo();
-            rasterizer.sType = VkStructureType.PipelineRasterizationStateCreateInfo;
-            rasterizer.polygonMode = VkPolygonMode.Fill;
+            rasterizer.sType = CSGL.Vulkan.VkStructureType.PipelineRasterizationStateCreateInfo;
+            rasterizer.polygonMode = CSGL.Vulkan.VkPolygonMode.Fill;
             rasterizer.lineWidth = 1f;
-            rasterizer.cullMode = VkCullModeFlags.BackBit;
-            rasterizer.frontFace = VkFrontFace.Clockwise;
+            rasterizer.cullMode = CSGL.Vulkan.VkCullModeFlags.BackBit;
+            rasterizer.frontFace = CSGL.Vulkan.VkFrontFace.Clockwise;
 
-            var rasterizerMarshalled = new Marshalled<VkPipelineRasterizationStateCreateInfo>(rasterizer);
+            var rasterizerNative = new Native<VkPipelineRasterizationStateCreateInfo>(rasterizer);
 
             var multisampling = new VkPipelineMultisampleStateCreateInfo();
-            multisampling.sType = VkStructureType.PipelineMultisampleStateCreateInfo;
-            multisampling.rasterizationSamples = VkSampleCountFlags._1_Bit;
+            multisampling.sType = CSGL.Vulkan.VkStructureType.PipelineMultisampleStateCreateInfo;
+            multisampling.rasterizationSamples = CSGL.Vulkan.VkSampleCountFlags._1_Bit;
             multisampling.minSampleShading = 1f;
 
-            var multisamplingMarshalled = new Marshalled<VkPipelineMultisampleStateCreateInfo>(multisampling);
+            var multisamplingNative = new Native<VkPipelineMultisampleStateCreateInfo>(multisampling);
 
             var colorBlendAttachment = new VkPipelineColorBlendAttachmentState();
-            colorBlendAttachment.colorWriteMask = VkColorComponentFlags.RBit
-                                                | VkColorComponentFlags.GBit
-                                                | VkColorComponentFlags.BBit
-                                                | VkColorComponentFlags.ABit;
-            colorBlendAttachment.srcColorBlendFactor = VkBlendFactor.One;
-            colorBlendAttachment.dstColorBlendFactor = VkBlendFactor.Zero;
-            colorBlendAttachment.colorBlendOp = VkBlendOp.Add;
-            colorBlendAttachment.srcAlphaBlendFactor = VkBlendFactor.One;
-            colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor.Zero;
-            colorBlendAttachment.alphaBlendOp = VkBlendOp.Add;
+            colorBlendAttachment.colorWriteMask = CSGL.Vulkan.VkColorComponentFlags.RBit
+                                                | CSGL.Vulkan.VkColorComponentFlags.GBit
+                                                | CSGL.Vulkan.VkColorComponentFlags.BBit
+                                                | CSGL.Vulkan.VkColorComponentFlags.ABit;
+            colorBlendAttachment.srcColorBlendFactor = CSGL.Vulkan.VkBlendFactor.One;
+            colorBlendAttachment.dstColorBlendFactor = CSGL.Vulkan.VkBlendFactor.Zero;
+            colorBlendAttachment.colorBlendOp = CSGL.Vulkan.VkBlendOp.Add;
+            colorBlendAttachment.srcAlphaBlendFactor = CSGL.Vulkan.VkBlendFactor.One;
+            colorBlendAttachment.dstAlphaBlendFactor = CSGL.Vulkan.VkBlendFactor.Zero;
+            colorBlendAttachment.alphaBlendOp = CSGL.Vulkan.VkBlendOp.Add;
 
-            var colorBlendAttachmentMarshalled = new Marshalled<VkPipelineColorBlendAttachmentState>(colorBlendAttachment);
+            var colorBlendAttachmentNative = new Native<VkPipelineColorBlendAttachmentState>(colorBlendAttachment);
 
             var colorBlending = new VkPipelineColorBlendStateCreateInfo();
-            colorBlending.sType = VkStructureType.PipelineColorBlendStateCreateInfo;
-            colorBlending.logicOp = VkLogicOp.Copy;
+            colorBlending.sType = CSGL.Vulkan.VkStructureType.PipelineColorBlendStateCreateInfo;
+            colorBlending.logicOp = CSGL.Vulkan.VkLogicOp.Copy;
             colorBlending.attachmentCount = 1;
-            colorBlending.pAttachments = colorBlendAttachmentMarshalled.Address;
+            colorBlending.pAttachments = colorBlendAttachmentNative.Address;
 
-            var colorBlendingMarshalled = new Marshalled<VkPipelineColorBlendStateCreateInfo>(colorBlending);
+            var colorBlendingNative = new Native<VkPipelineColorBlendStateCreateInfo>(colorBlending);
 
             var pipelineLayoutInfo = new VkPipelineLayoutCreateInfo();
-            pipelineLayoutInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
+            pipelineLayoutInfo.sType = CSGL.Vulkan.VkStructureType.PipelineLayoutCreateInfo;
 
             if (pipelineLayout != VkPipelineLayout.Null) {
                 VK.DestroyPipelineLayout(device, pipelineLayout, alloc);
@@ -648,45 +672,45 @@ namespace Samples {
             var result = VK.CreatePipelineLayout(device, ref pipelineLayoutInfo, alloc, out pipelineLayout);
 
             var info = new VkGraphicsPipelineCreateInfo();
-            info.sType = VkStructureType.GraphicsPipelineCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.GraphicsPipelineCreateInfo;
             info.stageCount = 2;
             info.pStages = shaderStages.Address;
-            info.pVertexInputState = vertexInputMarshalled.Address;
-            info.pInputAssemblyState = inputAssemblyMarshalled.Address;
-            info.pViewportState = viewportStateMarshalled.Address;
-            info.pRasterizationState = rasterizerMarshalled.Address;
-            info.pMultisampleState = multisamplingMarshalled.Address;
-            info.pColorBlendState = colorBlendingMarshalled.Address;
+            info.pVertexInputState = vertexInputNative.Address;
+            info.pInputAssemblyState = inputAssemblyNative.Address;
+            info.pViewportState = viewportStateNative.Address;
+            info.pRasterizationState = rasterizerNative.Address;
+            info.pMultisampleState = multisamplingNative.Address;
+            info.pColorBlendState = colorBlendingNative.Address;
             info.layout = pipelineLayout;
             info.renderPass = renderPass;
             info.subpass = 0;
             info.basePipelineHandle = VkPipeline.Null;
             info.basePipelineIndex = -1;
 
-            var infoMarshalled = new Marshalled<VkGraphicsPipelineCreateInfo>(info);
-            var temp = new Marshalled<VkPipeline>();
+            var infoNative = new Native<VkGraphicsPipelineCreateInfo>(info);
+            var temp = new Native<VkPipeline>();
 
             if (pipeline != VkPipeline.Null) {
                 VK.DestroyPipeline(device, pipeline, alloc);
             }
 
-            result = VK.CreateGraphicsPipelines(device, VkPipelineCache.Null, 1, infoMarshalled.Address, alloc, temp.Address);
+            result = VK.CreateGraphicsPipelines(device, VkPipelineCache.Null, 1, infoNative.Address, alloc, temp.Address);
             pipeline = temp.Value;
 
-            infoMarshalled.Dispose();
+            infoNative.Dispose();
             temp.Dispose();
 
             entry.Dispose();
             shaderStages.Dispose();
-            vertexInputMarshalled.Dispose();
-            inputAssemblyMarshalled.Dispose();
-            viewportMarshalled.Dispose();
-            scissorMarshalled.Dispose();
-            viewportStateMarshalled.Dispose();
-            rasterizerMarshalled.Dispose();
-            multisamplingMarshalled.Dispose();
-            colorBlendingMarshalled.Dispose();
-            colorBlendAttachmentMarshalled.Dispose();
+            vertexInputNative.Dispose();
+            inputAssemblyNative.Dispose();
+            viewportNative.Dispose();
+            scissorNative.Dispose();
+            viewportStateNative.Dispose();
+            rasterizerNative.Dispose();
+            multisamplingNative.Dispose();
+            colorBlendingNative.Dispose();
+            colorBlendAttachmentNative.Dispose();
             VK.DestroyShaderModule(device, vert, alloc);
             VK.DestroyShaderModule(device, frag, alloc);
         }
@@ -699,10 +723,10 @@ namespace Samples {
             swapchainFramebuffers = new List<VkFramebuffer>(swapchainImageViews.Count);
 
             for (int i = 0; i < swapchainImageViews.Count; i++) {
-                var attachments = new Marshalled<VkImageView>(swapchainImageViews[i]);
+                var attachments = new Native<VkImageView>(swapchainImageViews[i]);
 
                 var info = new VkFramebufferCreateInfo();
-                info.sType = VkStructureType.FramebufferCreateInfo;
+                info.sType = CSGL.Vulkan.VkStructureType.FramebufferCreateInfo;
                 info.renderPass = renderPass;
                 info.attachmentCount = 1;
                 info.pAttachments = attachments.Address;
@@ -721,7 +745,7 @@ namespace Samples {
 
         void CreateCommandPool() {
             var info = new VkCommandPoolCreateInfo();
-            info.sType = VkStructureType.CommandPoolCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.CommandPoolCreateInfo;
             info.queueFamilyIndex = graphicsIndex;
 
             var result = VK.CreateCommandPool(device, ref info, alloc, out commandPool);
@@ -729,36 +753,36 @@ namespace Samples {
 
         void CreateCommandBuffers() {
             if (commandBuffers != null) {
-                var marshalled = new MarshalledArray<VkCommandBuffer>(commandBuffers);
-                VK.FreeCommandBuffers(device, commandPool, (uint)commandBuffers.Count, marshalled.Address);
-                marshalled.Dispose();
+                var Native = new NativeArray<VkCommandBuffer>(commandBuffers);
+                VK.FreeCommandBuffers(device, commandPool, (uint)commandBuffers.Count, Native.Address);
+                Native.Dispose();
             }
             commandBuffers = new List<VkCommandBuffer>(swapchainFramebuffers.Count);
 
             var info = new VkCommandBufferAllocateInfo();
-            info.sType = VkStructureType.CommandBufferAllocateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.CommandBufferAllocateInfo;
             info.commandPool = commandPool;
-            info.level = VkCommandBufferLevel.Primary;
+            info.level = CSGL.Vulkan.VkCommandBufferLevel.Primary;
             info.commandBufferCount = (uint)commandBuffers.Capacity;
 
-            var commandBuffersMarshalled = new MarshalledArray<VkCommandBuffer>(commandBuffers.Capacity);
+            var commandBuffersNative = new NativeArray<VkCommandBuffer>(commandBuffers.Capacity);
 
-            var result = VK.AllocateCommandBuffers(device, ref info, commandBuffersMarshalled.Address);
+            var result = VK.AllocateCommandBuffers(device, ref info, commandBuffersNative.Address);
 
             for (int i = 0; i < commandBuffers.Capacity; i++) {
-                commandBuffers.Add(commandBuffersMarshalled[i]);
+                commandBuffers.Add(commandBuffersNative[i]);
             }
-            commandBuffersMarshalled.Dispose();
+            commandBuffersNative.Dispose();
 
             for (int i = 0; i < commandBuffers.Count; i++) {
                 var beginInfo = new VkCommandBufferBeginInfo();
-                beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
-                beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUseBit;
+                beginInfo.sType = CSGL.Vulkan.VkStructureType.CommandBufferBeginInfo;
+                beginInfo.flags = CSGL.Vulkan.VkCommandBufferUsageFlags.SimultaneousUseBit;
 
                 VK.BeginCommandBuffer(commandBuffers[i], ref beginInfo);
 
                 var renderPassInfo = new VkRenderPassBeginInfo();
-                renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
+                renderPassInfo.sType = CSGL.Vulkan.VkStructureType.RenderPassBeginInfo;
                 renderPassInfo.renderPass = renderPass;
                 renderPassInfo.framebuffer = swapchainFramebuffers[i];
                 renderPassInfo.renderArea.extent = swapchainExtent;
@@ -769,24 +793,24 @@ namespace Samples {
                 clearColor.color.float32_2 = 0;
                 clearColor.color.float32_3 = 1f;
 
-                var clearColorMarshalled = new Marshalled<VkClearValue>(clearColor);
+                var clearColorNative = new Native<VkClearValue>(clearColor);
                 renderPassInfo.clearValueCount = 1;
-                renderPassInfo.pClearValues = clearColorMarshalled.Address;
+                renderPassInfo.pClearValues = clearColorNative.Address;
 
-                VK.CmdBeginRenderPass(commandBuffers[i], ref renderPassInfo, VkSubpassContents.Inline);
-                VK.CmdBindPipeline(commandBuffers[i], VkPipelineBindPoint.Graphics, pipeline);
+                VK.CmdBeginRenderPass(commandBuffers[i], ref renderPassInfo, CSGL.Vulkan.VkSubpassContents.Inline);
+                VK.CmdBindPipeline(commandBuffers[i], CSGL.Vulkan.VkPipelineBindPoint.Graphics, pipeline);
                 VK.CmdDraw(commandBuffers[i], 3, 1, 0, 0);
                 VK.CmdEndRenderPass(commandBuffers[i]);
 
                 result = VK.EndCommandBuffer(commandBuffers[i]);
 
-                clearColorMarshalled.Dispose();
+                clearColorNative.Dispose();
             }
         }
 
         void CreateSemaphores() {
             var info = new VkSemaphoreCreateInfo();
-            info.sType = VkStructureType.SemaphoreCreateInfo;
+            info.sType = CSGL.Vulkan.VkStructureType.SemaphoreCreateInfo;
 
             VK.CreateSemaphore(device, ref info, alloc, out imageAvailableSemaphore);
             VK.CreateSemaphore(device, ref info, alloc, out renderFinishedSemaphore);
@@ -794,11 +818,11 @@ namespace Samples {
     }
 
     struct SwapchainSupport {
-        public Marshalled<VkSurfaceCapabilitiesKHR> cap;
+        public Native<VkSurfaceCapabilitiesKHR> cap;
         public List<VkSurfaceFormatKHR> formats;
-        public List<VkPresentModeKHR> modes;
+        public List<CSGL.Vulkan.VkPresentModeKHR> modes;
 
-        public SwapchainSupport(Marshalled<VkSurfaceCapabilitiesKHR> cap, List<VkSurfaceFormatKHR> formats, List<VkPresentModeKHR> modes) {
+        public SwapchainSupport(Native<VkSurfaceCapabilitiesKHR> cap, List<VkSurfaceFormatKHR> formats, List<CSGL.Vulkan.VkPresentModeKHR> modes) {
             this.cap = cap;
             this.formats = formats;
             this.modes = modes;
